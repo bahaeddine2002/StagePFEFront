@@ -1,0 +1,294 @@
+<div class="page-container">
+  <nav class="breadcrumb">
+    <span>Administration</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span>Gestion des utilisateurs</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Créer un utilisateur</span>
+  </nav>
+
+  <header class="page-header">
+    <h1 class="page-title">Créer un nouvel utilisateur</h1>
+    <p class="page-subtitle">
+      Ajoutez un utilisateur et définissez ses informations principales ainsi
+      que ses rôles d’accès.
+    </p>
+  </header>
+
+  <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+    <div class="main-layout">
+      <!-- Left -->
+      <aside class="left-col">
+        <div class="card general-info">
+          <div class="card-header">
+            <mat-icon class="header-icon blue">person_add</mat-icon>
+            <h2>Informations Générales</h2>
+          </div>
+
+          <div class="custom-form">
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label>Matricule <span class="required">*</span></label>
+                <input
+                  type="text"
+                  formControlName="matricule"
+                  placeholder="Ex: EMP-2024-001"
+                />
+                <p class="input-helper-text">
+                  Identifiant interne unique de l’employé.
+                </p>
+                <div
+                  class="field-error"
+                  *ngIf="
+                    userForm.controls.matricule.hasError('required') &&
+                    (userForm.controls.matricule.touched || submitAttempted)
+                  "
+                >
+                  <span class="error-dot"></span>
+                  <span>Le matricule est obligatoire.</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Email <span class="required">*</span></label>
+                <input
+                  type="email"
+                  formControlName="email"
+                  placeholder="nom.prenom@st2i.com"
+                />
+                <p class="input-helper-text">
+                  Adresse électronique professionnelle requise.
+                </p>
+
+                <div
+                  class="field-error"
+                  *ngIf="
+                    userForm.controls.email.hasError('required') &&
+                    (userForm.controls.email.touched || submitAttempted)
+                  "
+                >
+                  <span class="error-dot"></span>
+                  <span>L’email est obligatoire.</span>
+                </div>
+
+                <div
+                  class="field-error"
+                  *ngIf="
+                    userForm.controls.email.hasError('email') &&
+                    (userForm.controls.email.touched || submitAttempted)
+                  "
+                >
+                  <span class="error-dot"></span>
+                  <span>Veuillez saisir un email valide.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label>Prénom <span class="required">*</span></label>
+                <input
+                  type="text"
+                  formControlName="firstName"
+                  placeholder="Prénom de l’utilisateur"
+                />
+                <div
+                  class="field-error"
+                  *ngIf="
+                    userForm.controls.firstName.hasError('required') &&
+                    (userForm.controls.firstName.touched || submitAttempted)
+                  "
+                >
+                  <span class="error-dot"></span>
+                  <span>Le prénom est obligatoire.</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Nom <span class="required">*</span></label>
+                <input
+                  type="text"
+                  formControlName="lastName"
+                  placeholder="Nom de famille"
+                />
+                <div
+                  class="field-error"
+                  *ngIf="
+                    userForm.controls.lastName.hasError('required') &&
+                    (userForm.controls.lastName.touched || submitAttempted)
+                  "
+                >
+                  <span class="error-dot"></span>
+                  <span>Le nom est obligatoire.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Mot de passe <span class="required">*</span></label>
+
+              <div class="password-input-wrapper">
+                <input
+                  [type]="hidePassword ? 'password' : 'text'"
+                  formControlName="password"
+                  placeholder="Mot de passe provisoire"
+                />
+                <button
+                  type="button"
+                  class="password-toggle-btn"
+                  (click)="hidePassword = !hidePassword"
+                >
+                  <mat-icon>{{
+                    hidePassword ? "visibility" : "visibility_off"
+                  }}</mat-icon>
+                </button>
+              </div>
+
+              <p class="input-helper-text">
+                Choisissez un mot de passe provisoire pour l’utilisateur.
+              </p>
+
+              <div
+                class="field-error"
+                *ngIf="
+                  userForm.controls.password.hasError('required') &&
+                  (userForm.controls.password.touched || submitAttempted)
+                "
+              >
+                <span class="error-dot"></span>
+                <span>Le mot de passe est obligatoire.</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Rôles / Profils <span class="required">*</span></label>
+
+              <div class="role-cards-grid">
+                <button
+                  type="button"
+                  class="role-card"
+                  *ngFor="let role of availableRoles"
+                  [class.selected]="isRoleSelected(role.code)"
+                  (click)="toggleRole(role.code)"
+                >
+                  <div class="role-card-content">
+                    <div class="role-card-title">{{ role.libelle }}</div>
+                    <div class="role-card-desc">{{ role.description }}</div>
+                  </div>
+
+                  <div
+                    class="role-card-check"
+                    *ngIf="isRoleSelected(role.code)"
+                  >
+                    <mat-icon>check_circle</mat-icon>
+                  </div>
+                </button>
+              </div>
+
+              <p class="input-helper-text">
+                Vous pouvez sélectionner un ou plusieurs profils.
+              </p>
+
+              <div
+                class="field-error"
+                *ngIf="
+                  userForm.controls.profileCode.hasError('required') &&
+                  (userForm.controls.profileCode.touched || submitAttempted)
+                "
+              >
+                <span class="error-dot"></span>
+                <span>Veuillez sélectionner au moins un rôle.</span>
+              </div>
+            </div>
+
+            <div class="user-form-bottom">
+              <div class="status-inline">
+                <mat-slide-toggle
+                  color="primary"
+                  formControlName="active"
+                ></mat-slide-toggle>
+                <span class="status-inline-label">Statut actif</span>
+              </div>
+
+              <div class="bottom-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  routerLink="/admin/users"
+                >
+                  Annuler
+                </button>
+
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  [disabled]="isSubmitting"
+                >
+                  Enregistrer l’utilisateur
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right -->
+      <main class="right-col">
+        <div class="card security-card">
+          <div class="security-card-inner">
+            <div class="security-title-row">
+              <mat-icon class="header-icon blue">security</mat-icon>
+              <h3>DIRECTIVES DE SÉCURITÉ</h3>
+            </div>
+
+            <div class="security-info-item">
+              <mat-icon>verified</mat-icon>
+              <div>
+                <strong>Création du compte :</strong>
+                <p>
+                  Le compte est créé avec les informations saisies par
+                  l’administrateur.
+                </p>
+              </div>
+            </div>
+
+            <div class="security-info-item">
+              <mat-icon>admin_panel_settings</mat-icon>
+              <div>
+                <strong>Rôles :</strong>
+                <p>
+                  Les permissions sont héritées des profils sélectionnés. Vous
+                  pouvez attribuer plusieurs profils à un même utilisateur.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card profile-preview-card">
+          <div class="profile-preview-visual">
+            <mat-icon>person_add</mat-icon>
+          </div>
+
+          <h3>Aperçu du profil</h3>
+          <p>
+            L’image de profil pourra être ajoutée par l’utilisateur lors de sa
+            première connexion.
+          </p>
+
+          <div class="completion-line">
+            <div class="completion-fill"></div>
+          </div>
+          <span class="completion-text">Complétion du formulaire : 35%</span>
+        </div>
+
+        <div class="card st2i-banner-card">
+          <div class="st2i-banner-overlay">
+            <h3>ST2i Enterprise</h3>
+            <p>Plateforme de gestion de projet</p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </form>
+</div>

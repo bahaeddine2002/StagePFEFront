@@ -1,0 +1,243 @@
+<div class="page-container">
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <span>Administration</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span>Gestion des rôles</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Liste des rôles</span>
+  </nav>
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="page-header-text">
+      <h1 class="page-title">Liste des rôles</h1>
+      <p class="page-subtitle">
+        Gérez les rôles, les utilisateurs associés et les permissions par
+        module.
+      </p>
+    </div>
+
+    <button mat-flat-button class="btn-primary" (click)="setUrl()">
+      <mat-icon>add</mat-icon>
+      Nouveau rôle
+    </button>
+  </header>
+
+  <section class="stats-grid">
+    <article class="stat-card accent-line">
+      <div class="stat-content">
+        <p class="stat-label">Total rôles</p>
+        <h2 class="stat-value">{{ totalRoles }}</h2>
+        <div class="stat-footer positive">
+          <mat-icon>trending_up</mat-icon>
+          <span>Synchronisé avec la liste</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>verified_user</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card accent-line neutral-accent">
+      <div class="stat-content">
+        <p class="stat-label">Permissions actives</p>
+        <h2 class="stat-value">{{ activePermissions }}</h2>
+        <div class="stat-footer muted">
+          <span>Valeur temporaire</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>lock</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card success-accent">
+      <div class="stat-content">
+        <p class="stat-label">Statut de conformité</p>
+        <h2 class="stat-value">98%</h2>
+        <div class="stat-footer positive">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ complianceStatus }}</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>shield</mat-icon>
+      </div>
+    </article>
+  </section>
+
+  <section class="toolbar-card">
+    <div class="toolbar-left">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Module</mat-label>
+        <mat-select>
+          <mat-option value="all">Tous les modules</mat-option>
+          <mat-option value="Administration">Administration</mat-option>
+          <mat-option value="Projets">Projets</mat-option>
+          <mat-option value="Finance">Finance</mat-option>
+          <mat-option value="Reporting">Reporting</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="toolbar-right">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher un rôle</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          type="text"
+          placeholder="Filtrer par nom ou description..."
+        />
+      </mat-form-field>
+    </div>
+  </section>
+
+  <section class="table-card" *ngIf="errorMessage">
+    <div class="empty-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ errorMessage }}</p>
+    </div>
+  </section>
+
+  <section class="table-card" *ngIf="!errorMessage">
+    <div class="table-wrapper">
+      <table class="roles-table">
+        <thead>
+          <tr>
+            <th>NOM DU RÔLE</th>
+            <th>DESCRIPTION</th>
+            <th>UTILISATEURS</th>
+            <th>PERMISSIONS</th>
+            <th class="actions-col">ACTIONS</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <!-- Example row 1 -->
+          <tr *ngIf="isLoading">
+            <td colspan="5">
+              <div class="empty-state">
+                <mat-icon>hourglass_top</mat-icon>
+                <p>Chargement des rôles...</p>
+              </div>
+            </td>
+          </tr>
+          <tr
+            *ngFor="let role of roles; trackBy: trackByRoleId"
+            [hidden]="isLoading"
+          >
+            <td>
+              <div class="role-cell">
+                <div class="role-text">
+                  <div class="role-name">{{ role.libelle }}</div>
+                  <div class="role-module">{{ role.code }}</div>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <div class="description-cell">
+                {{ role.description || "Aucune description disponible." }}
+              </div>
+            </td>
+
+            <td>
+              <div class="users-cell">
+                <span class="users-placeholder">—</span>
+              </div>
+            </td>
+
+            <td>
+              <div class="permissions-cell">
+                <ng-container
+                  *ngFor="let permission of getVisiblePermissions(role)"
+                >
+                  <span class="permission-chip">{{ permission }}</span>
+                </ng-container>
+
+                <span
+                  class="permission-chip permission-chip-more"
+                  *ngIf="getRemainingPermissionsCount(role) > 0"
+                >
+                  +{{ getRemainingPermissionsCount(role) }}
+                </span>
+
+                <span
+                  class="permission-chip permission-chip-more"
+                  *ngIf="role.permissions.length === 0"
+                >
+                  Aucune
+                </span>
+              </div>
+            </td>
+
+            <td class="actions-col">
+              <div class="actions-cell">
+                <button
+                  mat-icon-button
+                  class="action-icon"
+                  (click)="onView(role)"
+                  aria-label="Voir"
+                >
+                  <mat-icon>visibility</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  class="action-icon"
+                  (click)="onEdit(role)"
+                  aria-label="Modifier"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  class="action-icon delete"
+                  (click)="onDelete(role)"
+                  aria-label="Supprimer"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty state example: keep commented for later -->
+          <!--
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <mat-icon>inbox</mat-icon>
+              <p>Aucun rôle trouvé.</p>
+            </div>
+          </td>
+        </tr>
+        --></tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <div class="table-results">Affichage de 1 à 4 sur 12 rôles</div>
+
+      <div class="pagination">
+        <button class="page-btn nav-btn">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+
+        <button class="page-btn nav-btn">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>

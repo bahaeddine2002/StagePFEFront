@@ -1,0 +1,170 @@
+<div class="navbar-container" [class.example-is-mobile]="mobileQuery.matches">
+  <mat-toolbar class="main-header">
+    <!-- Logo Section -->
+    <div class="brand-section">
+      <button mat-icon-button (click)="snav.toggle()" class="mobile-menu-btn">
+        <mat-icon>menu</mat-icon>
+      </button>
+
+      <a class="logo" [routerLink]="['/']">
+        ST2I <span class="logo-accent">ENTERPRISE</span>
+      </a>
+    </div>
+
+    <!-- Navigation Links -->
+    <nav class="nav-links">
+      <a
+        *ngIf="visibleTopSections.includes('Dashboard')"
+        (click)="setSection('Dashboard')"
+        [class.active]="activeSection === 'Dashboard'"
+      >
+        Dashboard
+      </a>
+
+      <a
+        *ngIf="visibleTopSections.includes('Projets')"
+        (click)="setSection('Projets')"
+        [class.active]="activeSection === 'Projets'"
+      >
+        Projets
+      </a>
+
+      <a
+        *ngIf="visibleTopSections.includes('Adminstration')"
+        (click)="setSection('Adminstration')"
+        [class.active]="activeSection === 'Adminstration'"
+      >
+        Administration
+      </a>
+    </nav>
+
+    <span class="spacer"></span>
+
+    <div class="search-container" *ngIf="!mobileQuery.matches">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Rechercher..." />
+    </div>
+
+    <!-- Action Icons -->
+    <div class="header-actions">
+      <button
+        mat-icon-button
+        class="action-btn"
+        [matMenuTriggerFor]="notificationMenu"
+      >
+        <mat-icon matBadge="2" matBadgeColor="warn">notifications</mat-icon>
+      </button>
+
+      <button mat-icon-button class="action-btn">
+        <mat-icon>settings</mat-icon>
+      </button>
+
+      <div class="profile-circle" [matMenuTriggerFor]="userMenu">
+        <mat-icon>person</mat-icon>
+      </div>
+    </div>
+
+    <mat-menu
+      #notificationMenu="matMenu"
+      xPosition="before"
+      yPosition="above"
+      [overlapTrigger]="false"
+    >
+      <a mat-menu-item>
+        <span>You have new tasks</span>
+      </a>
+      <a mat-menu-item>
+        <span>You have a new message</span>
+      </a>
+    </mat-menu>
+
+    <mat-menu
+      #userMenu="matMenu"
+      xPosition="before"
+      yPosition="above"
+      [overlapTrigger]="false"
+    >
+      <a mat-menu-item [routerLink]="['/account/profile']">
+        <mat-icon>person</mat-icon>
+        <span>Account</span>
+      </a>
+
+      <button mat-menu-item type="button" (click)="onLogout()">
+        <mat-icon>exit_to_app</mat-icon>
+        <span>Log out</span>
+      </button>
+    </mat-menu>
+  </mat-toolbar>
+
+  <mat-sidenav-container class="navbar-sidenav-container">
+    <!-- Side nav -->
+    <mat-sidenav
+      #snav
+      [opened]="!mobileQuery.matches"
+      [mode]="mobileQuery.matches ? 'over' : 'side'"
+      [fixedInViewport]="mobileQuery.matches"
+      fixedTopGap="56"
+      class="sidenav"
+    >
+      <div class="sidebar-context-header">
+        <div class="icon-box">
+          <mat-icon>{{ currentSectionInfo.icon }}</mat-icon>
+        </div>
+
+        <div class="text-box">
+          <h2>{{ activeSection }}</h2>
+          <span>{{ currentSectionInfo.subtitle }}</span>
+        </div>
+      </div>
+
+      <mat-nav-list class="sidebar-list">
+        <a
+          mat-list-item
+          *ngFor="let item of currentSidebarItems"
+          [routerLink]="item.route"
+          routerLinkActive="active"
+        >
+          <mat-icon mat-list-icon>{{ item.icon }}</mat-icon>
+          <p mat-line>{{ item.label }}</p>
+        </a>
+
+        <mat-divider></mat-divider>
+
+        <a mat-list-item [routerLink]="['/account/profile']">
+          <mat-icon mat-list-icon>person</mat-icon>
+          <p mat-line>Mon Compte</p>
+        </a>
+
+        <a mat-list-item (click)="onLogout()">
+          <mat-icon mat-list-icon>exit_to_app</mat-icon>
+          <p mat-line>Déconnexion</p>
+        </a>
+
+        <a
+          id="push-bottom"
+          mat-list-item
+          [routerLink]="['/about']"
+          routerLinkActive="active"
+        >
+          <mat-icon mat-list-icon>info_outline</mat-icon>
+          <p mat-line>About</p>
+        </a>
+      </mat-nav-list>
+    </mat-sidenav>
+
+    <!-- Main content -->
+    <mat-sidenav-content class="sidenav-content">
+      <div class="progress-bar-container">
+        <mat-progress-bar
+          color="accent"
+          mode="indeterminate"
+          *ngIf="spinnerService.visibility | async"
+        >
+        </mat-progress-bar>
+      </div>
+
+      <router-outlet></router-outlet>
+      <app-toast-container></app-toast-container>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

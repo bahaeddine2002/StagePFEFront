@@ -1,0 +1,164 @@
+<div class="page-container">
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <span>Administration</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span>Gestion des rôles</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Créer un rôle</span>
+  </nav>
+
+  <header class="page-header">
+    <h1 class="page-title">Créer un nouveau rôle</h1>
+    <p class="page-subtitle">
+      Définissez les accès et les permissions pour les membres de votre
+      organisation.
+    </p>
+  </header>
+
+  <form [formGroup]="roleForm" (ngSubmit)="onSubmit()">
+    <div class="main-layout">
+      <!-- Left Column -->
+      <aside class="left-col">
+        <div class="card general-info accent-line">
+          <div class="card-header">
+            <mat-icon class="header-icon blue">info</mat-icon>
+            <h2>Informations Générales</h2>
+          </div>
+
+          <div class="custom-form">
+            <div class="form-group">
+              <label>Code du rôle <span class="required">*</span></label>
+              <input
+                type="text"
+                formControlName="code"
+                placeholder="Ex: ADMIN_PROJ"
+              />
+              <div
+                class="field-error"
+                *ngIf="
+                  roleForm.controls.code.hasError('required') &&
+                  (roleForm.controls.code.touched || submitAttempted)
+                "
+              >
+                <span class="error-dot"></span>
+                Le code du rôle est obligatoire.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Libellé <span class="required">*</span></label>
+              <input
+                type="text"
+                formControlName="libelle"
+                placeholder="Ex: Administrateur de Projets"
+              />
+              <div
+                class="field-error"
+                *ngIf="
+                  roleForm.controls.libelle.hasError('required') &&
+                  (roleForm.controls.libelle.touched || submitAttempted)
+                "
+              >
+                <span class="error-dot"></span>
+                <span>Le libellé est obligatoire.</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <textarea
+                formControlName="description"
+                rows="5"
+                placeholder="Décrivez les responsabilités de ce rôle..."
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="card security-card">
+          <div class="security-content">
+            <h3>Sécurité ST2i</h3>
+            <p>
+              Les permissions accordées ici seront immédiatement appliquées à
+              tous les utilisateurs assignés à ce rôle.
+            </p>
+          </div>
+          <div class="security-pattern"></div>
+        </div>
+      </aside>
+
+      <!-- Right Column -->
+      <main class="right-col">
+        <div class="card permission-card">
+          <div class="card-header space-between">
+            <div class="header-title">
+              <mat-icon class="header-icon blue">checklist</mat-icon>
+              <h2>Matrice des Permissions</h2>
+            </div>
+            <div class="header-actions">
+              <button type="button" class="btn-link">Tout sélectionner</button>
+              <button type="button" class="btn-link muted">
+                Réinitialiser
+              </button>
+            </div>
+          </div>
+
+          <div class="permission-body">
+            <div class="permission-group" *ngFor="let parent of permissionTree">
+              <div class="group-header">
+                <mat-icon class="group-icon">{{
+                  getIconForGroup(parent.code)
+                }}</mat-icon>
+                <mat-checkbox
+                  [checked]="isParentChecked(parent)"
+                  [indeterminate]="isParentIndeterminate(parent)"
+                  (change)="toggleParent(parent, $event.checked)"
+                >
+                  <span class="group-name">{{ parent.name }}</span>
+                </mat-checkbox>
+              </div>
+
+              <div class="items-grid">
+                <div
+                  class="permission-item"
+                  *ngFor="let child of parent.children"
+                >
+                  <mat-checkbox
+                    [checked]="isChildSelected(child)"
+                    (change)="toggleChild(parent, child, $event.checked)"
+                    [class.danger-permission]="
+                      child.name.includes('(Sensible)')
+                    "
+                  >
+                    <span class="item-label">{{ child.name }}</span>
+                  </mat-checkbox>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <button
+              type="button"
+              class="btn-secondary"
+              routerLink="/admin/roles"
+            >
+              Annuler
+            </button>
+            <button type="submit" class="btn-primary" [disabled]="isSubmitting">
+              <mat-icon>save</mat-icon>
+              {{ isSubmitting ? "Enregistrement..." : "Enregistrer le rôle" }}
+            </button>
+          </div>
+        </div>
+
+        <p class="footer-note">
+          <mat-icon>info</mat-icon>
+          Champs marqués d'un astérisque ( <span class="required">*</span> )
+          sont obligatoires.
+        </p>
+      </main>
+    </div>
+  </form>
+</div>

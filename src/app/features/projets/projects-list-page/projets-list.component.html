@@ -1,0 +1,217 @@
+<div class="page-container">
+  <nav class="breadcrumb">
+    <span>Projets</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span>Gestion des projets</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Liste des projets</span>
+  </nav>
+
+  <header class="page-header">
+    <div class="page-header-text">
+      <h1 class="page-title">Liste des projets</h1>
+      <p class="page-subtitle">
+        Consultez les projets disponibles et accédez à leur espace de pilotage.
+      </p>
+    </div>
+
+    <button mat-flat-button class="btn-primary" (click)="setUrl()">
+      <mat-icon>add</mat-icon>
+      Nouveau projet
+    </button>
+  </header>
+
+  <section class="stats-grid">
+    <article class="stat-card accent-line">
+      <div class="stat-content">
+        <p class="stat-label">Total projets</p>
+        <h2 class="stat-value">{{ totalProjets }}</h2>
+        <div class="stat-footer positive">
+          <mat-icon>trending_up</mat-icon>
+          <span>Synchronisé avec la liste</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>folder_open</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card accent-line neutral-accent">
+      <div class="stat-content">
+        <p class="stat-label">Projets actifs</p>
+        <h2 class="stat-value">{{ projetsActifs }}</h2>
+        <div class="stat-footer muted">
+          <span>En cours ou planifiés</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>work</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card success-accent">
+      <div class="stat-content">
+        <p class="stat-label">Projets clôturés</p>
+        <h2 class="stat-value">{{ projetsClotures }}</h2>
+        <div class="stat-footer positive">
+          <mat-icon>check_circle</mat-icon>
+          <span>Livrés ou terminés</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>task_alt</mat-icon>
+      </div>
+    </article>
+  </section>
+
+  <section class="toolbar-card">
+    <div class="toolbar-left"></div>
+
+    <div class="toolbar-right">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher un projet</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          type="text"
+          placeholder="Filtrer par code, nom, client ou statut..."
+          (input)="applySearch($any($event.target).value)"
+        />
+      </mat-form-field>
+    </div>
+  </section>
+
+  <section class="table-card" *ngIf="errorMessage">
+    <div class="empty-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ errorMessage }}</p>
+    </div>
+  </section>
+
+  <section class="table-card" *ngIf="!errorMessage">
+    <div class="table-wrapper">
+      <table class="roles-table">
+        <thead>
+          <tr>
+            <th>PROJET</th>
+            <th>CODE</th>
+            <th>CLIENT</th>
+            <th>PARTENAIRE</th>
+            <th>STATUT</th>
+            <th class="actions-col">ACTIONS</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngIf="isLoading">
+            <td colspan="6">
+              <div class="empty-state">
+                <mat-icon>hourglass_top</mat-icon>
+                <p>Chargement des projets...</p>
+              </div>
+            </td>
+          </tr>
+
+          <tr
+            *ngFor="let projet of filteredProjets; trackBy: trackByProjetId"
+            [hidden]="isLoading"
+          >
+            <td>
+              <div class="role-cell">
+                <div class="role-icon-box">
+                  {{ getProjetInitials(projet) }}
+                </div>
+
+                <div class="role-text">
+                  <div class="role-name">
+                    {{ projet.nomProjet }}
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <div class="description-cell">
+                {{ projet.codeProjet }}
+              </div>
+            </td>
+
+            <td>
+              <div class="description-cell">
+                {{ projet.client }}
+              </div>
+            </td>
+
+            <td>
+              <div class="description-cell">
+                {{ projet.partenaire }}
+              </div>
+            </td>
+
+            <td>
+              <span
+                class="permission-chip"
+                [class.permission-chip-more]="projet.statut !== 'En cours'"
+              >
+                {{ projet.statut }}
+              </span>
+            </td>
+
+            <td class="actions-col">
+              <div class="actions-cell">
+                <button
+                  mat-icon-button
+                  class="action-icon"
+                  (click)="onView(projet)"
+                  aria-label="Voir"
+                >
+                  <mat-icon>visibility</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  class="action-icon"
+                  (click)="onEdit(projet)"
+                  aria-label="Modifier"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  class="action-icon delete"
+                  (click)="onDelete(projet)"
+                  aria-label="Supprimer"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="!isLoading && filteredProjets.length === 0">
+            <td colspan="6">
+              <div class="empty-state">
+                <mat-icon>inbox</mat-icon>
+                <p>Aucun projet trouvé.</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <div class="table-results">
+        Affichage de {{ filteredProjets.length }} projet(s)
+      </div>
+
+      <div class="pagination">
+        <button class="page-btn active">1</button>
+      </div>
+    </div>
+  </section>
+</div>
