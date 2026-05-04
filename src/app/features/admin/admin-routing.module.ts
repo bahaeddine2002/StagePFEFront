@@ -5,6 +5,7 @@ import { UserCreateComponent } from "./user-create/user-create.component";
 import { RolesComponent } from "./roles/roles.component";
 import { UsersComponent } from "./users/users.component";
 import { RoleCreateComponent } from "./role-create/role-create.component";
+import { TccReferentielComponent } from "./tcc/tcc-referentiel/tcc-referentiel.component";
 
 const routes: Routes = [
   {
@@ -15,6 +16,10 @@ const routes: Routes = [
       { path: "roles", component: RolesComponent },
       { path: "utilisateurs", component: UsersComponent },
       { path: "utilisateurs/create", component: UserCreateComponent },
+      {
+        path: "tcc",
+        component: TccReferentielComponent,
+      },
     ],
   },
 ];

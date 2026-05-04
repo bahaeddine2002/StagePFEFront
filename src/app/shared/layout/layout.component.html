@@ -2,11 +2,16 @@
   <mat-toolbar class="main-header">
     <!-- Logo Section -->
     <div class="brand-section">
-      <button mat-icon-button (click)="snav.toggle()" class="mobile-menu-btn">
+      <button
+        mat-icon-button
+        type="button"
+        (click)="snav.toggle()"
+        class="mobile-menu-btn"
+      >
         <mat-icon>menu</mat-icon>
       </button>
 
-      <a class="logo" [routerLink]="['/']">
+      <a class="logo" [routerLink]="['/projets']">
         ST2I <span class="logo-accent">ENTERPRISE</span>
       </a>
     </div>
@@ -30,9 +35,9 @@
       </a>
 
       <a
-        *ngIf="visibleTopSections.includes('Adminstration')"
-        (click)="setSection('Adminstration')"
-        [class.active]="activeSection === 'Adminstration'"
+        *ngIf="visibleTopSections.includes('Administration')"
+        (click)="setSection('Administration')"
+        [class.active]="activeSection === 'Administration'"
       >
         Administration
       </a>
@@ -49,13 +54,14 @@
     <div class="header-actions">
       <button
         mat-icon-button
+        type="button"
         class="action-btn"
         [matMenuTriggerFor]="notificationMenu"
       >
         <mat-icon matBadge="2" matBadgeColor="warn">notifications</mat-icon>
       </button>
 
-      <button mat-icon-button class="action-btn">
+      <button mat-icon-button type="button" class="action-btn">
         <mat-icon>settings</mat-icon>
       </button>
 
@@ -73,6 +79,7 @@
       <a mat-menu-item>
         <span>You have new tasks</span>
       </a>
+
       <a mat-menu-item>
         <span>You have a new message</span>
       </a>
@@ -108,21 +115,36 @@
     >
       <div class="sidebar-context-header">
         <div class="icon-box">
-          <mat-icon>{{ currentSectionInfo.icon }}</mat-icon>
+          <mat-icon>{{ currentSectionInfo?.icon }}</mat-icon>
         </div>
 
         <div class="text-box">
-          <h2>{{ activeSection }}</h2>
-          <span>{{ currentSectionInfo.subtitle }}</span>
+          <h2>
+            {{
+              isProjectWorkspaceRoute
+                ? "Projet #" + currentProjectId
+                : activeSection
+            }}
+          </h2>
+
+          <span>{{ currentSectionInfo?.subtitle }}</span>
         </div>
       </div>
+
+      <!-- TEMP DEBUG: you can uncomment this if something is wrong -->
+      <!--
+      <pre style="font-size: 11px; white-space: pre-wrap;">
+        {{ currentSidebarItems | json }}
+      </pre>
+      -->
 
       <mat-nav-list class="sidebar-list">
         <a
           mat-list-item
           *ngFor="let item of currentSidebarItems"
-          [routerLink]="item.route"
+          [routerLink]="[item.route]"
           routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
         >
           <mat-icon mat-list-icon>{{ item.icon }}</mat-icon>
           <p mat-line>{{ item.label }}</p>
@@ -130,7 +152,11 @@
 
         <mat-divider></mat-divider>
 
-        <a mat-list-item [routerLink]="['/account/profile']">
+        <a
+          mat-list-item
+          [routerLink]="['/account/profile']"
+          routerLinkActive="active"
+        >
           <mat-icon mat-list-icon>person</mat-icon>
           <p mat-line>Mon Compte</p>
         </a>
@@ -164,6 +190,7 @@
       </div>
 
       <router-outlet></router-outlet>
+
       <app-toast-container></app-toast-container>
     </mat-sidenav-content>
   </mat-sidenav-container>

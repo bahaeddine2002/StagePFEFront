@@ -10,9 +10,10 @@ import { AppRoutingModule } from "./app-routing.module";
 import { LoggerModule } from "ngx-logger";
 import { environment } from "../environments/environment";
 import { HttpClientModule } from "@angular/common/http";
+import { TccRessourceFormDrawerComponent } from './features/admini/tcc/tcc-ressource-form-drawer/tcc-ressource-form-drawer.component';
 
 @NgModule({
-  declarations: [AppComponent],
+  declarations: [AppComponent, TccRessourceFormDrawerComponent],
   imports: [
     BrowserModule,
     BrowserAnimationsModule,

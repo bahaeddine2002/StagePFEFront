@@ -106,7 +106,41 @@ export class UsersComponent implements OnInit {
   }
 
   onDelete(user: UserResponse): void {
-    console.log("Delete user", user);
-    this.toastService.error("Suppression non implémentée pour le moment.");
+    const confirmDelete = confirm(
+      `Voulez-vous vraiment supprimer l'utilisateur ${user.firstName} ${user.lastName} ?`,
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    this.isLoading = true;
+
+    this.usersService.deleteUser(user.id).subscribe({
+      next: () => {
+        this.users = this.users.filter((u) => u.id !== user.id);
+        this.filteredUsers = this.filteredUsers.filter((u) => u.id !== user.id);
+
+        this.totalUsers = this.users.length;
+        this.activeUsers = this.users.filter((u) => u.active).length;
+        this.inactiveUsers = this.users.filter((u) => !u.active).length;
+
+        this.toastService.success("Utilisateur supprimé avec succès.");
+
+        this.isLoading = false;
+      },
+
+      error: (error) => {
+        console.error("Delete failed", error);
+
+        if (error?.error?.message) {
+          this.toastService.error(error.error.message);
+        } else {
+          this.toastService.error("Impossible de supprimer cet utilisateur.");
+        }
+
+        this.isLoading = false;
+      },
+    });
   }
 }

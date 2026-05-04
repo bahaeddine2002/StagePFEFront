@@ -12,6 +12,7 @@ import { YesNoPipe } from "./pipes/yes-no.pipe";
 import { LayoutComponent } from "./layout/layout.component";
 import { SectionCardComponent } from "./section-card/section-card.component";
 import { ToastContainerComponent } from "./toast/toast-container/toast-container.component";
+import { AppDrawerShellComponent } from "./app-drawer-shell/app-drawer-shell.component";
 
 @NgModule({
   imports: [
@@ -30,6 +31,7 @@ import { ToastContainerComponent } from "./toast/toast-container/toast-container
     LayoutComponent,
     SectionCardComponent,
     ToastContainerComponent,
+    AppDrawerShellComponent,
   ],
   exports: [
     FormsModule,
@@ -42,6 +44,7 @@ import { ToastContainerComponent } from "./toast/toast-container/toast-container
     LocalDatePipe,
     YesNoPipe,
     ToastContainerComponent,
+    AppDrawerShellComponent,
   ],
 })
 export class SharedModule {}

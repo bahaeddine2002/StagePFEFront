@@ -1,0 +1,30 @@
+<div class="app-drawer">
+  <header class="drawer-header">
+    <div class="drawer-header-text">
+      <div class="drawer-title-row">
+        <h2>{{ title }}</h2>
+
+        <ng-content select="[drawerHeaderExtra]"></ng-content>
+      </div>
+
+      <p *ngIf="subtitle">{{ subtitle }}</p>
+    </div>
+
+    <button
+      mat-icon-button
+      class="drawer-close"
+      type="button"
+      (click)="close()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <main class="drawer-body">
+    <ng-content select="[drawerBody]"></ng-content>
+  </main>
+
+  <footer class="drawer-footer">
+    <ng-content select="[drawerFooter]"></ng-content>
+  </footer>
+</div>

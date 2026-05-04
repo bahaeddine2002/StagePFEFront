@@ -1,0 +1,464 @@
+<div class="fiche-page">
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-card">
+    <mat-icon>hourglass_empty</mat-icon>
+    Chargement de la fiche d’identification...
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage && !loading" class="state-card error">
+    <mat-icon>error_outline</mat-icon>
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="project && !loading">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <span>Projets</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span>Liste des projets</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span class="active">Fiche d'identification</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="title-line">
+          <h1>Fiche d’identification du projet</h1>
+
+          <span class="badge badge-code">
+            {{ text(project.codeProjet) }}
+          </span>
+
+          <span class="badge badge-status">
+            <span class="status-dot"></span>
+            {{ text(project.statutProjetLibelle) }}
+          </span>
+        </div>
+
+        <p class="page-subtitle">
+          {{ text(project.nomProjet) }}
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary" type="button" (click)="onBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour
+        </button>
+
+        <button class="btn btn-primary" type="button" (click)="onEdit()">
+          <mat-icon>edit</mat-icon>
+          Modifier
+        </button>
+
+        <button class="btn btn-danger" type="button" (click)="onExportPdf()">
+          <mat-icon>picture_as_pdf</mat-icon>
+          Exporter PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="fiche-grid">
+      <!-- LEFT COLUMN -->
+      <div class="left-column">
+        <!-- Informations générales -->
+        <section class="fiche-card accent-blue general-card">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>info</mat-icon>
+            </span>
+            <h2>Informations générales</h2>
+          </div>
+
+          <div class="card-body">
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Code projet</label>
+                <div class="readonly-value">{{ text(project.codeProjet) }}</div>
+              </div>
+
+              <div class="field-box">
+                <label>Contract ID</label>
+                <div class="readonly-value">{{ text(project.contractId) }}</div>
+              </div>
+            </div>
+
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Client</label>
+                <div class="readonly-value">{{ text(project.client) }}</div>
+              </div>
+
+              <div class="field-box">
+                <label>Partenaire</label>
+                <div class="readonly-value">{{ text(project.partenaire) }}</div>
+              </div>
+            </div>
+
+            <div class="field-box">
+              <label>Nom du projet</label>
+              <div class="readonly-value multiline">
+                {{ text(project.nomProjet) }}
+              </div>
+            </div>
+
+            <div class="field-box">
+              <label>Description du projet</label>
+              <div class="readonly-value multiline">
+                {{ text(project.descriptionProjet) }}
+              </div>
+            </div>
+
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Bailleur de fonds</label>
+                <div class="readonly-value">
+                  {{ text(project.bailleurDeFonds) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Chef de projet</label>
+                <div class="readonly-value strong manager-value">
+                  <span>{{ text(project.projectManagerNomComplet) }}</span>
+
+                  <small
+                    *ngIf="project.projectManagerActif === false"
+                    class="muted-warning"
+                  >
+                    Compte désactivé
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Budget initial & conversion -->
+        <section class="fiche-card accent-green">
+          <div class="card-header">
+            <span class="header-icon green">
+              <mat-icon>payments</mat-icon>
+            </span>
+            <h2>Budget initial & conversion</h2>
+          </div>
+
+          <div class="card-body">
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Devise du projet</label>
+                <div class="readonly-value">{{ deviseLabel() }}</div>
+              </div>
+
+              <div class="field-box">
+                <label>Taux de change vers TND</label>
+                <div class="readonly-value">
+                  {{ number(project.tauxChangeVersTnd) }}
+                </div>
+              </div>
+            </div>
+
+            <div class="money-grid">
+              <div class="money-box">
+                <label>Budget initial TO</label>
+                <div class="money-main">
+                  {{ money(project.budgetInitialTO) }}
+                </div>
+                <div class="money-secondary" *ngIf="showTndConversion()">
+                  ≈ {{ tnd(project.budgetInitialToTnd) }}
+                </div>
+              </div>
+
+              <div class="money-box selected">
+                <label>Budget ST2i</label>
+                <div class="money-main">
+                  {{ money(project.budgetST2i) }}
+                </div>
+              </div>
+
+              <div class="money-box">
+                <label>Budget licences & sous-traitance</label>
+                <div class="money-main">
+                  {{ money(project.budgetLicencesSousTraitance) }}
+                </div>
+              </div>
+
+              <div class="money-box total">
+                <label>Budget total</label>
+                <div class="money-main">
+                  {{ money(project.budgetTotal) }}
+                </div>
+                <div class="money-secondary" *ngIf="showTndConversion()">
+                  ≈ {{ tnd(project.budgetTotalTnd) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Charges / Workload -->
+        <section class="fiche-card accent-blue">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>groups</mat-icon>
+            </span>
+            <h2>Charges / Workload</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid four">
+              <div class="field-box">
+                <label>Workload initial</label>
+                <div class="readonly-value">
+                  {{ jh(project.workloadInitialJH) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Workload avenants</label>
+                <div class="readonly-value">
+                  {{ jh(project.workloadAvenantsJH) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Workload garantie</label>
+                <div class="readonly-value">
+                  {{ jh(project.workloadGarantieJH) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Workload vendu avenants inclus</label>
+                <div class="readonly-value calculated">
+                  {{ jh(project.workloadVenduAvenantsInclusJH) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="right-column">
+        <!-- Classification -->
+        <section class="fiche-card accent-blue classification-card">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>account_tree</mat-icon>
+            </span>
+            <h2>Classification</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Modèle business</label>
+                <div class="readonly-value">
+                  {{ text(project.businessModelLibelle) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Type d’engagement</label>
+                <div class="readonly-value">
+                  {{ text(project.typeEngagementLibelle) }}
+                </div>
+              </div>
+            </div>
+
+            <div class="field-box">
+              <label>Statut contractuel et financier initial</label>
+              <div class="readonly-value">—</div>
+            </div>
+
+            <div class="field-box">
+              <label>Statut projet</label>
+              <div class="readonly-value status-value">
+                {{ text(project.statutProjetLibelle) }}
+              </div>
+            </div>
+
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Devise projet</label>
+                <div class="readonly-value">{{ deviseLabel() }}</div>
+              </div>
+
+              <div class="field-box">
+                <label>Taux de change vers TND</label>
+                <div class="readonly-value">
+                  {{ number(project.tauxChangeVersTnd) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Planning -->
+        <section class="fiche-card accent-blue">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>calendar_month</mat-icon>
+            </span>
+            <h2>Planning</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Date de démarrage</label>
+                <div class="readonly-value">
+                  {{ date(project.dateDemarrage) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Date démarrage effective</label>
+                <div class="readonly-value">
+                  {{ date(project.dateDemarrageEffective) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Date de fin initiale prévue</label>
+                <div class="readonly-value">
+                  {{ date(project.dateFinInitialePrevue) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Durée du contrat</label>
+                <div class="readonly-value calculated">
+                  {{ number(project.dureeContratJours) }} jours
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Avenants -->
+        <section class="fiche-card accent-green">
+          <div class="card-header">
+            <span class="header-icon green">
+              <mat-icon>price_change</mat-icon>
+            </span>
+            <h2>Avenants & budget révisé</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Avenant</label>
+                <div class="readonly-value">
+                  {{ bool(project.avenant) }}
+                </div>
+              </div>
+
+              <div class="money-box small">
+                <label>Montant avenant</label>
+                <div class="money-main">
+                  {{ money(project.montantAvenant) }}
+                </div>
+              </div>
+
+              <div class="money-box small">
+                <label>Total avenants</label>
+                <div class="money-main">
+                  {{ money(project.montantAvenant) }}
+                </div>
+              </div>
+
+              <div class="money-box total small">
+                <label>Budget total avenants inclus</label>
+                <div class="money-main">
+                  {{ money(project.budgetTotal) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Full width profitability -->
+      <section class="fiche-card accent-red profitability-card">
+        <div class="card-header">
+          <span class="header-icon red">
+            <mat-icon>trending_up</mat-icon>
+          </span>
+          <h2>Coûts & rentabilité</h2>
+        </div>
+
+        <div class="card-body compact">
+          <div *ngIf="!project.diConfigured" class="di-alert">
+            <mat-icon>warning_amber</mat-icon>
+            <div>
+              <strong>Devis interne non configuré</strong>
+              <p>
+                Veuillez configurer le DI pour calculer le coût total DI, la
+                marge nette vendue et la rentabilité du projet.
+              </p>
+            </div>
+          </div>
+
+          <div class="fields-grid six">
+            <div class="field-box">
+              <label>PPR en TND</label>
+              <div class="readonly-value">
+                {{ tnd(project.pprTnd) }}
+              </div>
+            </div>
+
+            <div class="field-box">
+              <label>PPP en TND</label>
+              <div class="readonly-value">
+                {{ tnd(project.pppTnd) }}
+              </div>
+            </div>
+
+            <div class="field-box">
+              <label>Coût total DI en TND</label>
+              <div class="readonly-value">
+                {{ tnd(project.coutTotalDiTnd) }}
+              </div>
+            </div>
+
+            <div class="field-box">
+              <label>Marge nette vendue %</label>
+              <div
+                class="readonly-value"
+                [class.positive]="project.diConfigured"
+              >
+                {{ percent(project.margeNetteVenduePourcentage) }}
+              </div>
+            </div>
+
+            <div class="field-box">
+              <label>Marge nette vendue en TND</label>
+              <div
+                class="readonly-value"
+                [class.positive]="project.diConfigured"
+              >
+                {{ tnd(project.margeNetteVendueTnd) }}
+              </div>
+            </div>
+
+            <div class="field-box">
+              <label>Alerte rentabilité</label>
+              <div class="readonly-value">
+                {{ alerteRentabilite() }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="fiche-footer">
+      © 2024 ST2I Enterprise — Système de gestion de projets intégré
+    </div>
+  </ng-container>
+</div>

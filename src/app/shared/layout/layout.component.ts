@@ -6,84 +6,79 @@ import {
   AfterViewInit,
 } from "@angular/core";
 import { MediaMatcher } from "@angular/cdk/layout";
+import { NavigationEnd, Router } from "@angular/router";
+import { MatDialog } from "@angular/material/dialog";
 import { filter, Subject, takeUntil } from "rxjs";
 
 import { SpinnerService } from "../../core/services/spinner.service";
-import { NavigationEnd, Router } from "@angular/router";
-import { MatDialog } from "@angular/material/dialog";
 import { AuthService } from "src/app/core/services/auth.service";
+
 import {
   TopSection,
+  NavItem,
   SECTION_NAV_ITEMS,
   SECTION_CONFIG,
+  SectionInfo,
 } from "../config/layout-navigation.config";
+
+import {
+  PROJECT_NAV_ITEMS,
+  ProjectNavItem,
+} from "../config/project-navigation.config";
 
 @Component({
   selector: "app-layout",
   templateUrl: "./layout.component.html",
   styleUrls: ["./layout.component.css"],
 })
-export class LayoutComponent implements OnInit, OnDestroy, AfterViewInit {
-  private _mobileQueryListener: () => void;
-  private destroy$ = new Subject<void>();
-
+export class LayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   mobileQuery: MediaQueryList;
-  showSpinner = false;
-  userName = "";
-  isAdmin = false;
 
-  activeSection: TopSection = "Dashboard";
+  activeSection: TopSection | null = null;
 
-  private sectionPermissionMap: Record<TopSection, string[]> = {
-    Dashboard: ["DASHBOARD"],
-    Projets: [
-      "PROJETS",
-      "PROJETS_LISTE",
-      "PROJETS_VUE_ENSEMBLE",
-      "PROJETS_FICHE_IDENTIFICATION",
-      "PROJETS_LIVRABLES",
-      "PROJETS_COUT_ACTUALISE",
-      "PROJETS_COUT_PREVISIONNEL",
-      "PROJETS_DI",
-      "PROJETS_TCC",
-      "PROJETS_FACTURATION",
-      "PROJETS_STATISTIQUE",
-    ],
-    Adminstration: ["ADMINISTRATION", "ADMIN_ROLES", "ADMIN_UTILISATEURS"],
-  };
+  visibleTopSections: TopSection[] = [];
+
+  currentSidebarItems: NavItem[] = [];
+
+  currentSectionInfo: SectionInfo | null = null;
+
+  isProjectWorkspaceRoute = false;
+
+  currentProjectId: string | null = null;
+
+  private readonly destroy$ = new Subject<void>();
+
+  private readonly mobileQueryListener: () => void;
 
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private media: MediaMatcher,
     public spinnerService: SpinnerService,
     private router: Router,
-    private authService: AuthService,
     private dialog: MatDialog,
+    private authService: AuthService,
   ) {
     this.mobileQuery = this.media.matchMedia("(max-width: 1000px)");
-    this._mobileQueryListener = () => this.changeDetectorRef.detectChanges();
-    this.mobileQuery.addListener(this._mobileQueryListener);
+    this.mobileQueryListener = () => this.changeDetectorRef.detectChanges();
+    this.mobileQuery.addListener(this.mobileQueryListener);
   }
 
   ngOnInit(): void {
-    this.updateSectionFromUrl(this.router.url);
-    this.ensureValidActiveSection();
+    this.buildVisibleTopSections();
+
+    this.updateLayoutFromUrl(this.router.url);
 
     this.router.events
       .pipe(
-        filter((event) => event instanceof NavigationEnd),
+        filter(
+          (event): event is NavigationEnd => event instanceof NavigationEnd,
+        ),
         takeUntil(this.destroy$),
       )
-      .subscribe((event: any) => {
-        this.updateSectionFromUrl(event.urlAfterRedirects);
-        this.ensureValidActiveSection();
+      .subscribe((event) => {
+        this.buildVisibleTopSections();
+        this.updateLayoutFromUrl(event.urlAfterRedirects);
       });
-  }
-
-  ngOnDestroy(): void {
-    this.mobileQuery.removeListener(this._mobileQueryListener);
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   ngAfterViewInit(): void {
@@ -95,32 +90,22 @@ export class LayoutComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    const visibleItems = SECTION_NAV_ITEMS[section].filter((item) => {
-      return (
-        !item.permission || this.authService.hasPermission(item.permission)
-      );
-    });
-
-    const firstRouteOfSection = visibleItems[0]?.route;
-
-    if (firstRouteOfSection) {
-      this.router.navigate([firstRouteOfSection]);
+    if (section === "Dashboard") {
+      this.router.navigate(["/dashboard"]);
+      return;
     }
-  }
 
-  private updateSectionFromUrl(url: string): void {
-    if (url.startsWith("/admin")) {
-      this.activeSection = "Adminstration";
-    } else if (url.startsWith("/projets")) {
-      this.activeSection = "Projets";
-    } else {
-      this.activeSection = "Dashboard";
+    if (section === "Projets") {
+      this.router.navigate(["/projets"]);
+      return;
     }
-  }
 
-  private ensureValidActiveSection(): void {
-    if (!this.visibleTopSections.includes(this.activeSection)) {
-      this.activeSection = this.visibleTopSections[0] ?? "Dashboard";
+    if (section === "Administration") {
+      const visibleAdminItems = this.getVisibleSidebarItems("Administration");
+      const firstAdminRoute = visibleAdminItems[0]?.route ?? "/admin/roles";
+
+      this.router.navigate([firstAdminRoute]);
+      return;
     }
   }
 
@@ -130,22 +115,154 @@ export class LayoutComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(["/auth/login"]);
   }
 
-  get visibleTopSections(): TopSection[] {
-    return (Object.keys(this.sectionPermissionMap) as TopSection[]).filter(
-      (section) =>
-        this.authService.hasAnyPermission(this.sectionPermissionMap[section]),
+  private updateLayoutFromUrl(url: string): void {
+    const cleanUrl = url.split("?")[0].split("#")[0];
+
+    console.log("Current URL:", cleanUrl);
+    console.log("Visible top sections:", this.visibleTopSections);
+
+    const projectWorkspaceMatch = cleanUrl.match(
+      /^\/projets\/([^\/]+)\/([^\/]+)$/,
     );
+
+    if (projectWorkspaceMatch) {
+      const projectId = projectWorkspaceMatch[1];
+
+      this.applyProjectWorkspace(projectId);
+      return;
+    }
+
+    if (
+      cleanUrl === "/projets" ||
+      cleanUrl === "/projets/" ||
+      cleanUrl === "/projets/create"
+    ) {
+      if (!this.visibleTopSections.includes("Projets")) {
+        this.redirectToFirstAllowedSection();
+        return;
+      }
+      this.applyNormalSection("Projets");
+      return;
+    }
+
+    if (cleanUrl.startsWith("/dashboard")) {
+      if (!this.visibleTopSections.includes("Dashboard")) {
+        this.redirectToFirstAllowedSection();
+        return;
+      }
+      this.applyNormalSection("Dashboard");
+
+      return;
+    }
+
+    if (cleanUrl.startsWith("/admin")) {
+      if (!this.visibleTopSections.includes("Administration")) {
+        this.redirectToFirstAllowedSection();
+        return;
+      }
+
+      this.applyNormalSection("Administration");
+
+      return;
+    }
+
+    this.redirectToFirstAllowedSection();
   }
 
-  get currentSidebarItems() {
-    return SECTION_NAV_ITEMS[this.activeSection].filter((item) => {
-      return (
-        !item.permission || this.authService.hasPermission(item.permission)
-      );
+  private buildVisibleTopSections(): void {
+    const allSections = Object.keys(SECTION_NAV_ITEMS) as TopSection[];
+
+    this.visibleTopSections = allSections.filter((section) => {
+      return this.getVisibleSidebarItems(section).length > 0;
     });
   }
 
-  get currentSectionInfo() {
-    return SECTION_CONFIG[this.activeSection] ?? SECTION_CONFIG["Dashboard"];
+  private getVisibleProjectSidebarItems(projectId: string): NavItem[] {
+    return PROJECT_NAV_ITEMS.filter((item: ProjectNavItem) =>
+      this.authService.hasPermission(item.permission),
+    ).map((item: ProjectNavItem) => ({
+      label: item.label,
+      icon: item.icon,
+      permission: item.permission,
+      route: `/projets/${projectId}/${item.routeSuffix}`,
+    }));
+  }
+
+  private applyNormalSection(section: TopSection): void {
+    this.activeSection = section;
+    this.currentProjectId = null;
+    this.isProjectWorkspaceRoute = false;
+
+    this.currentSectionInfo = SECTION_CONFIG[section];
+    this.currentSidebarItems = this.getVisibleSidebarItems(section);
+  }
+
+  private applyProjectWorkspace(projectID: string): void {
+    this.activeSection = "Projets";
+    this.currentProjectId = projectID;
+    this.isProjectWorkspaceRoute = true;
+    this.currentSectionInfo = {
+      subtitle: "ESPACE PROJET",
+      icon: "folder_open",
+    };
+    this.currentSidebarItems = this.getVisibleProjectSidebarItems(projectID);
+  }
+
+  private redirectToFirstAllowedSection(): void {
+    const firstVisibleSection = this.visibleTopSections[0];
+
+    if (!firstVisibleSection) {
+      this.activeSection = null;
+      this.currentProjectId = null;
+      this.isProjectWorkspaceRoute = false;
+      this.currentSidebarItems = [];
+      this.activeSection = null;
+      this.router.navigate(["/no-acess"]);
+      return;
+    }
+
+    this.applyNormalSection(firstVisibleSection);
+
+    if (firstVisibleSection === "Dashboard") {
+      this.router.navigate(["/dashboard"]);
+      return;
+    }
+
+    if (firstVisibleSection === "Projets") {
+      this.router.navigate(["/projets"]);
+      return;
+    }
+
+    if (firstVisibleSection === "Administration") {
+      const firstAdminRoute =
+        this.currentSidebarItems[0]?.route ?? "/admin/roles";
+
+      this.router.navigate([firstAdminRoute]);
+      return;
+    }
+  }
+
+  private canAccessNavItem(item: NavItem): boolean {
+    if (item.permission) return this.authService.hasPermission(item.permission);
+    else if (item.permissionsAny)
+      return this.authService.hasAnyPermission(item.permissionsAny);
+    else return true;
+  }
+
+  private getVisibleSidebarItems(section: TopSection): NavItem[] {
+    return SECTION_NAV_ITEMS[section].filter((item) =>
+      this.canAccessNavItem(item),
+    );
+  }
+
+  private canAcessSection(section: TopSection): boolean {
+    return this.visibleTopSections.includes(section);
+  }
+
+  ngOnDestroy(): void {
+    this.mobileQuery.removeListener(this.mobileQueryListener);
+
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

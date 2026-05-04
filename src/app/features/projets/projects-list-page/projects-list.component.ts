@@ -113,7 +113,7 @@ export class ProjetsListComponent implements OnInit {
   }
 
   onView(projet: StaticProjet): void {
-    this.router.navigate(["/projets", projet.id]);
+    this.router.navigate(["/projets", projet.id, "vue-ensemble"]);
   }
 
   onEdit(projet: StaticProjet): void {

@@ -1,0 +1,782 @@
+<div class="page-container">
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <span>Administration</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Référentiel TCC</span>
+  </nav>
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="page-header-text">
+      <h1 class="page-title">Référentiel TCC</h1>
+      <p class="page-subtitle">
+        Gérez les coûts internes des ressources et les coefficients annuels
+        utilisés dans les Devis Internes.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        mat-stroked-button
+        class="btn-secondary"
+        (click)="onCreateAnneeConfig()"
+      >
+        <mat-icon>calendar_month</mat-icon>
+        Nouveau paramétrage
+      </button>
+
+      <button
+        mat-flat-button
+        class="btn-primary"
+        (click)="onCreateTccRessource()"
+        [disabled]="hasNoYearConfig"
+      >
+        <mat-icon>add</mat-icon>
+        Nouveau TCC
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <section class="stats-grid">
+    <article class="stat-card accent-line">
+      <div class="stat-content">
+        <p class="stat-label">Ressources couvertes</p>
+        <h2 class="stat-value">{{ totalRessourcesCouvertes }}</h2>
+        <div class="stat-footer muted">
+          <span>Ressources avec au moins un TCC</span>
+        </div>
+      </div>
+      <div class="stat-visual">
+        <mat-icon>engineering</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card accent-line neutral-accent">
+      <div class="stat-content">
+        <p class="stat-label">Années configurées</p>
+        <h2 class="stat-value">{{ totalAnneesConfigurees }}</h2>
+        <div class="stat-footer muted">
+          <span>
+            {{
+              availableYears.length > 0
+                ? availableYears.join(", ")
+                : "Aucune année"
+            }}
+          </span>
+        </div>
+      </div>
+      <div class="stat-visual">
+        <mat-icon>calendar_today</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card success-accent">
+      <div class="stat-content">
+        <p class="stat-label">TCC manquants</p>
+        <h2 class="stat-value">{{ tccManquants }}</h2>
+        <div class="stat-footer positive">
+          <mat-icon>check_circle</mat-icon>
+          <span>Aucune alerte détectée</span>
+        </div>
+      </div>
+      <div class="stat-visual">
+        <mat-icon>verified</mat-icon>
+      </div>
+    </article>
+  </section>
+
+  <!-- Error -->
+  <section class="table-card" *ngIf="errorMessage">
+    <div class="empty-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ errorMessage }}</p>
+      <button mat-stroked-button class="btn-secondary" (click)="loadPageData()">
+        <mat-icon>refresh</mat-icon>
+        Réessayer
+      </button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="!errorMessage">
+    <!-- Tabs -->
+    <section class="tcc-tabs-card">
+      <button
+        type="button"
+        class="tcc-tab"
+        [class.active]="activeTab === 'RESSOURCES'"
+        (click)="setActiveTab('RESSOURCES')"
+      >
+        <mat-icon>groups</mat-icon>
+        TCC Ressources
+      </button>
+
+      <button
+        type="button"
+        class="tcc-tab"
+        [class.active]="activeTab === 'ANNEES'"
+        (click)="setActiveTab('ANNEES')"
+      >
+        <mat-icon>settings</mat-icon>
+        Paramétrage annuel
+      </button>
+    </section>
+
+    <!-- Toolbar -->
+    <section class="toolbar-card">
+      <div class="toolbar-left">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Année</mat-label>
+          <mat-select
+            [value]="selectedYear"
+            (selectionChange)="onYearChange($event.value)"
+          >
+            <mat-option [value]="'ALL'">Toutes les années</mat-option>
+            <mat-option *ngFor="let year of availableYears" [value]="year">
+              {{ year }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="toolbar-right">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>
+            {{
+              activeTab === "RESSOURCES"
+                ? "Rechercher une ressource"
+                : "Rechercher une année"
+            }}
+          </mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            type="text"
+            [value]="searchTerm"
+            (input)="onSearchChange($any($event.target).value)"
+            [placeholder]="
+              activeTab === 'RESSOURCES'
+                ? 'Filtrer par nom, matricule ou email...'
+                : 'Filtrer par année...'
+            "
+          />
+        </mat-form-field>
+      </div>
+    </section>
+
+    <!-- Loading -->
+    <section class="table-card" *ngIf="isLoading">
+      <div class="empty-state">
+        <mat-icon>hourglass_top</mat-icon>
+        <p>Chargement du référentiel TCC...</p>
+      </div>
+    </section>
+
+    <!-- TCC Ressources -->
+    <section
+      class="table-card"
+      *ngIf="!isLoading && activeTab === 'RESSOURCES'"
+    >
+      <ng-container *ngIf="hasNoYearConfig; else ressourcesContent">
+        <div class="setup-empty-state">
+          <div class="setup-icon">
+            <mat-icon>calendar_month</mat-icon>
+          </div>
+          <h2>Aucun paramétrage annuel TCC</h2>
+          <p>
+            Créez d’abord un paramétrage annuel afin de définir le coefficient
+            FG utilisé pour calculer les TCC ressources.
+          </p>
+          <ul>
+            <li>Le coefficient FG est défini une seule fois par année.</li>
+            <li>
+              Les TCC ressources utilisent ce coefficient automatiquement.
+            </li>
+            <li>
+              Sans paramétrage annuel, aucun TCC ressource ne peut être créé.
+            </li>
+          </ul>
+          <button
+            mat-flat-button
+            class="btn-primary"
+            (click)="onCreateAnneeConfig()"
+          >
+            <mat-icon>add</mat-icon>
+            Nouveau paramétrage annuel
+          </button>
+        </div>
+      </ng-container>
+
+      <ng-template #ressourcesContent>
+        <ng-container *ngIf="hasNoTccResources; else ressourcesTable">
+          <div class="setup-empty-state">
+            <div class="setup-icon">
+              <mat-icon>person_add</mat-icon>
+            </div>
+            <h2>Aucun TCC ressource trouvé</h2>
+            <p>
+              Ajoutez un TCC pour une ressource afin de permettre son
+              utilisation dans les Devis Internes.
+            </p>
+            <div class="info-line" *ngIf="anneeConfigs.length > 0">
+              Paramétrage disponible :
+              <strong>
+                {{ anneeConfigs[0].annee }} — Coef. FG
+                {{ formatCoef(anneeConfigs[0].coefFg) }}
+              </strong>
+            </div>
+            <button
+              mat-flat-button
+              class="btn-primary"
+              (click)="onCreateTccRessource()"
+            >
+              <mat-icon>add</mat-icon>
+              Nouveau TCC ressource
+            </button>
+          </div>
+        </ng-container>
+
+        <ng-template #ressourcesTable>
+          <div class="table-wrapper">
+            <table class="roles-table tcc-table">
+              <thead>
+                <tr>
+                  <th>RESSOURCE</th>
+                  <th>ANNÉE</th>
+                  <th>TCC DE BASE</th>
+                  <th>COEF. FG</th>
+                  <th>TCC INCLUS FG</th>
+                  <th>UTILISATION DI</th>
+                  <th class="actions-col">ACTIONS</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr *ngIf="hasFilteredNoTccResources">
+                  <td colspan="7">
+                    <div class="empty-state">
+                      <mat-icon>search_off</mat-icon>
+                      <p>Aucun TCC ressource ne correspond aux filtres.</p>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr
+                  *ngFor="
+                    let item of filteredTccRessources;
+                    trackBy: trackByTccRessourceId
+                  "
+                >
+                  <td>
+                    <div class="role-cell">
+                      <div class="role-icon-box">
+                        <mat-icon>person</mat-icon>
+                      </div>
+                      <div class="role-text">
+                        <div class="role-name">
+                          {{
+                            item.employeNomComplet ||
+                              "Utilisateur #" + item.employeId
+                          }}
+                        </div>
+                        <div class="role-module">
+                          <span *ngIf="item.employeMatricule">
+                            {{ item.employeMatricule }}
+                          </span>
+                          <span *ngIf="item.employeEmail">
+                            · {{ item.employeEmail }}
+                          </span>
+                          <span
+                            *ngIf="!item.employeMatricule && !item.employeEmail"
+                          >
+                            ID ressource : {{ item.employeId }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <span class="year-chip">{{ item.annee }}</span>
+                  </td>
+
+                  <td>
+                    <div class="money-cell">
+                      <strong>{{ formatMoney(item.tccBase) }} TND</strong>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div class="coef-cell">
+                      <strong>{{ formatCoef(item.coefFgAnnuel) }}</strong>
+                      <span>{{
+                        formatPercentFromCoef(item.coefFgAnnuel)
+                      }}</span>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div class="money-cell highlight">
+                      <strong>{{ formatMoney(item.tccInclusFg) }} TND</strong>
+                      <span>/ H-Jour</span>
+                    </div>
+                  </td>
+
+                  <td>
+                    <span class="usage-chip">0 ligne DI</span>
+                  </td>
+
+                  <td class="actions-col">
+                    <div class="actions-cell">
+                      <button
+                        mat-icon-button
+                        class="action-icon"
+                        (click)="onViewTccRessource(item)"
+                      >
+                        <mat-icon>visibility</mat-icon>
+                      </button>
+
+                      <button
+                        mat-icon-button
+                        class="action-icon"
+                        (click)="onEditTccRessource(item)"
+                      >
+                        <mat-icon>edit</mat-icon>
+                      </button>
+
+                      <button
+                        mat-icon-button
+                        class="action-icon delete"
+                        (click)="onDeleteTccRessource(item)"
+                        [disabled]="
+                          isDeleting && deletingResourceId === item.id
+                        "
+                      >
+                        <mat-icon>
+                          {{
+                            isDeleting && deletingResourceId === item.id
+                              ? "hourglass_top"
+                              : "delete"
+                          }}
+                        </mat-icon>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-footer">
+            <div class="table-results">
+              {{ filteredTccRessources.length }} TCC ressource(s) affiché(s)
+            </div>
+          </div>
+        </ng-template>
+      </ng-template>
+    </section>
+
+    <!-- Paramétrage annuel -->
+    <section class="table-card" *ngIf="!isLoading && activeTab === 'ANNEES'">
+      <ng-container *ngIf="hasNoYearConfig; else anneesContent">
+        <div class="setup-empty-state">
+          <div class="setup-icon">
+            <mat-icon>settings</mat-icon>
+          </div>
+          <h2>Aucun paramétrage annuel TCC</h2>
+          <p>
+            Créez un paramétrage annuel afin de définir le coefficient FG
+            utilisé pour calculer les TCC ressources.
+          </p>
+          <ul>
+            <li>Le coefficient FG est global pour une année.</li>
+            <li>Il sera appliqué à toutes les ressources de cette année.</li>
+            <li>Les TCC inclus FG seront calculés automatiquement.</li>
+          </ul>
+          <button
+            mat-flat-button
+            class="btn-primary"
+            (click)="onCreateAnneeConfig()"
+          >
+            <mat-icon>add</mat-icon>
+            Nouveau paramétrage annuel
+          </button>
+        </div>
+      </ng-container>
+
+      <ng-template #anneesContent>
+        <div class="table-wrapper">
+          <table class="roles-table tcc-table">
+            <thead>
+              <tr>
+                <th>ANNÉE</th>
+                <th>COEF. FG</th>
+                <th>ÉQUIVALENT</th>
+                <th>RESSOURCES ASSOCIÉES</th>
+                <th class="actions-col">ACTIONS</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngIf="hasFilteredNoYearConfigs">
+                <td colspan="5">
+                  <div class="empty-state">
+                    <mat-icon>search_off</mat-icon>
+                    <p>Aucun paramétrage annuel ne correspond aux filtres.</p>
+                  </div>
+                </td>
+              </tr>
+
+              <tr
+                *ngFor="
+                  let item of filteredAnneeConfigs;
+                  trackBy: trackByAnneeConfigId
+                "
+              >
+                <td>
+                  <span class="year-chip">{{ item.annee }}</span>
+                </td>
+
+                <td>
+                  <div class="coef-cell">
+                    <strong>{{ formatCoef(item.coefFg) }}</strong>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="permission-chip">
+                    {{ formatPercentFromCoef(item.coefFg) }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="usage-chip">
+                    {{ getRessourceCountByYear(item.annee) }} ressource(s)
+                  </span>
+                </td>
+
+                <td class="actions-col">
+                  <div class="actions-cell">
+                    <button
+                      mat-icon-button
+                      class="action-icon"
+                      (click)="onViewAnneeConfig(item)"
+                    >
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+
+                    <button
+                      mat-icon-button
+                      class="action-icon"
+                      (click)="onEditAnneeConfig(item)"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+
+                    <button
+                      mat-icon-button
+                      class="action-icon delete"
+                      (click)="onDeleteAnneeConfig(item)"
+                      [disabled]="isDeleting && deletingConfigId === item.id"
+                    >
+                      <mat-icon>
+                        {{
+                          isDeleting && deletingConfigId === item.id
+                            ? "hourglass_top"
+                            : "delete"
+                        }}
+                      </mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <div class="table-results">
+            {{ filteredAnneeConfigs.length }} paramétrage(s) affiché(s)
+          </div>
+        </div>
+      </ng-template>
+    </section>
+  </ng-container>
+
+  <!-- Paramétrage annuel drawer -->
+  <div
+    class="drawer-overlay"
+    *ngIf="isAnneeDrawerOpen"
+    (click)="closeAnneeDrawer()"
+  ></div>
+
+  <aside class="tcc-drawer" *ngIf="isAnneeDrawerOpen">
+    <header class="drawer-header">
+      <div>
+        <h2>
+          {{
+            editingAnneeConfigId
+              ? "Modifier le paramétrage annuel"
+              : "Nouveau paramétrage annuel"
+          }}
+        </h2>
+        <p>Définir le coefficient FG global pour une année</p>
+      </div>
+
+      <button mat-icon-button class="drawer-close" (click)="closeAnneeDrawer()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+
+    <form
+      class="drawer-body"
+      [formGroup]="anneeConfigForm"
+      (ngSubmit)="saveAnneeConfig()"
+    >
+      <article class="drawer-card">
+        <div class="drawer-card-title blue-title">
+          <span>01</span>
+          <h3>Identité de l’exercice</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Année</mat-label>
+            <input matInput type="number" formControlName="annee" />
+            <mat-error *ngIf="anneeControl?.hasError('required')">
+              L’année est obligatoire.
+            </mat-error>
+            <mat-error *ngIf="anneeControl?.hasError('min')">
+              L’année doit être supérieure ou égale à 2000.
+            </mat-error>
+            <mat-error *ngIf="anneeControl?.hasError('max')">
+              L’année doit être inférieure ou égale à 2100.
+            </mat-error>
+          </mat-form-field>
+
+          <div class="readonly-field">
+            <span>Devise</span>
+            <strong>TND</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="drawer-card">
+        <div class="drawer-card-title slate-title">
+          <span>02</span>
+          <h3>Coefficient FG</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Coef. FG</mat-label>
+            <input
+              matInput
+              type="number"
+              step="0.001"
+              formControlName="coefFg"
+            />
+            <mat-error *ngIf="coefFgControl?.hasError('required')">
+              Le coefficient FG est obligatoire.
+            </mat-error>
+            <mat-error *ngIf="coefFgControl?.hasError('min')">
+              Le coefficient FG doit être positif.
+            </mat-error>
+          </mat-form-field>
+
+          <div class="readonly-field">
+            <span>Équivalent</span>
+            <strong>{{ coefFgPercentPreview }}%</strong>
+          </div>
+        </div>
+      </article>
+    </form>
+
+    <footer class="drawer-footer">
+      <button
+        mat-stroked-button
+        type="button"
+        class="btn-secondary"
+        (click)="closeAnneeDrawer()"
+      >
+        Annuler
+      </button>
+
+      <button
+        mat-flat-button
+        type="button"
+        class="btn-primary"
+        (click)="saveAnneeConfig()"
+        [disabled]="anneeConfigForm.invalid || isSavingAnneeConfig"
+      >
+        <mat-icon>
+          {{ isSavingAnneeConfig ? "hourglass_top" : "save" }}
+        </mat-icon>
+        {{
+          editingAnneeConfigId
+            ? "Enregistrer les modifications"
+            : "Enregistrer le paramétrage"
+        }}
+      </button>
+    </footer>
+  </aside>
+
+  <!-- TCC ressource drawer -->
+  <div
+    class="drawer-overlay"
+    *ngIf="isTccRessourceDrawerOpen"
+    (click)="closeTccRessourceDrawer()"
+  ></div>
+
+  <aside class="tcc-drawer" *ngIf="isTccRessourceDrawerOpen">
+    <header class="drawer-header">
+      <div>
+        <h2>
+          {{
+            editingTccRessourceId
+              ? "Modifier le TCC ressource"
+              : "Nouveau TCC ressource"
+          }}
+        </h2>
+        <p>Ajouter un coût interne pour une ressource et une année</p>
+      </div>
+
+      <button
+        mat-icon-button
+        class="drawer-close"
+        (click)="closeTccRessourceDrawer()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+
+    <form
+      class="drawer-body"
+      [formGroup]="tccRessourceForm"
+      (ngSubmit)="saveTccRessource()"
+    >
+      <article class="drawer-card">
+        <div class="drawer-card-title blue-title">
+          <span>01</span>
+          <h3>Ressource & année</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Ressource</mat-label>
+            <mat-select formControlName="employeId">
+              <mat-option *ngFor="let user of users" [value]="user.id">
+                <div class="user-option">
+                  <strong>{{ getUserFullName(user) }}</strong>
+                  <span>{{ getUserMeta(user) }}</span>
+                </div>
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="employeIdControl?.hasError('required')">
+              La ressource est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Année</mat-label>
+            <mat-select formControlName="annee">
+              <mat-option
+                *ngFor="let config of anneeConfigs"
+                [value]="config.annee"
+              >
+                {{ config.annee }} — coef {{ formatCoef(config.coefFg) }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="tccRessourceAnneeControl?.hasError('required')">
+              L’année est obligatoire.
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </article>
+
+      <article class="drawer-card">
+        <div class="drawer-card-title slate-title">
+          <span>02</span>
+          <h3>Coût de base</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>TCC de base</mat-label>
+            <input
+              matInput
+              type="number"
+              step="0.001"
+              formControlName="tccBase"
+            />
+            <mat-error *ngIf="tccBaseControl?.hasError('required')">
+              Le TCC de base est obligatoire.
+            </mat-error>
+            <mat-error *ngIf="tccBaseControl?.hasError('min')">
+              Le TCC de base doit être positif.
+            </mat-error>
+          </mat-form-field>
+
+          <div class="readonly-field">
+            <span>Unité</span>
+            <strong>H-Jour</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="drawer-card">
+        <div class="drawer-card-title green-title">
+          <span>03</span>
+          <h3>Calcul prévisionnel</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <div class="readonly-field">
+            <span>Coef. FG annuel</span>
+            <strong>{{ formatCoef(selectedCoefFg) }}</strong>
+          </div>
+
+          <div class="readonly-field">
+            <span>Équivalent</span>
+            <strong>{{ formatPercentFromCoef(selectedCoefFg) }}</strong>
+          </div>
+        </div>
+
+        <div class="formula-preview">
+          <span>TCC inclus FG</span>
+          <strong> {{ formatMoney(tccInclusFgPreview) }} TND / H-Jour </strong>
+          <small> TCC inclus FG = TCC de base × Coef. FG annuel </small>
+        </div>
+      </article>
+    </form>
+
+    <footer class="drawer-footer">
+      <button
+        mat-stroked-button
+        type="button"
+        class="btn-secondary"
+        (click)="closeTccRessourceDrawer()"
+      >
+        Annuler
+      </button>
+
+      <button
+        mat-flat-button
+        type="button"
+        class="btn-primary"
+        (click)="saveTccRessource()"
+        [disabled]="tccRessourceForm.invalid || isSavingTccRessource"
+      >
+        <mat-icon>
+          {{ isSavingTccRessource ? "hourglass_top" : "save" }}
+        </mat-icon>
+        {{
+          editingTccRessourceId
+            ? "Enregistrer les modifications"
+            : "Enregistrer le TCC"
+        }}
+      </button>
+    </footer>
+  </aside>
+</div>

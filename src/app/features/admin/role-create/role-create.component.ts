@@ -65,6 +65,15 @@ export class RoleCreateComponent implements OnInit {
       permissionCodes: this.roleForm.value.permissionCodes ?? [],
     };
 
+    payload.permissionCodes = payload.permissionCodes.filter(
+      (code) =>
+        code !== "DASHBOARD" &&
+        code !== "PROJETS" &&
+        code !== "ADMINISTRATION" &&
+        code !== "PROJETS_LISTE",
+    );
+
+    console.log(payload);
     this.serverErrorMessage = "";
     this.isSubmitting = true;
 
@@ -198,20 +207,21 @@ export class RoleCreateComponent implements OnInit {
   private buildPermissionTree(permissions: Permissions[]): PermissionNode[] {
     const rootMap: Record<string, PermissionNode> = {};
 
-    permissions
-      .filter(
-        (permission) =>
-          permission.code === "DASHBOARD" ||
-          permission.code === "PROJETS" ||
-          permission.code === "ADMINISTRATION",
-      )
-      .forEach((permission) => {
-        rootMap[permission.code] = {
-          code: permission.code,
-          name: permission.libelle,
-          children: [],
-        };
-      });
+    rootMap["DASHBOARD"] = {
+      code: "DASHBOARD",
+      name: "dashboard",
+      children: [],
+    };
+    rootMap["PROJETS"] = {
+      code: "PROJETS",
+      name: "projets",
+      children: [],
+    };
+    rootMap["ADMINISTRATION"] = {
+      code: "ADMINISTRATION",
+      name: "administration",
+      children: [],
+    };
 
     permissions.forEach((permission) => {
       const node = this.toNode(permission);
