@@ -78,6 +78,7 @@
           matInput
           type="text"
           placeholder="Filtrer par code, nom, client ou statut..."
+          [value]="searchTerm"
           (input)="applySearch($any($event.target).value)"
         />
       </mat-form-field>
@@ -88,6 +89,11 @@
     <div class="empty-state">
       <mat-icon>error_outline</mat-icon>
       <p>{{ errorMessage }}</p>
+
+      <button mat-stroked-button class="btn-secondary" (click)="loadProjects()">
+        <mat-icon>refresh</mat-icon>
+        Réessayer
+      </button>
     </div>
   </section>
 
@@ -129,6 +135,10 @@
                   <div class="role-name">
                     {{ projet.nomProjet }}
                   </div>
+
+                  <div class="role-module" *ngIf="projet.dateDemarrage">
+                    Démarrage : {{ projet.dateDemarrage | date: "dd/MM/yyyy" }}
+                  </div>
                 </div>
               </div>
             </td>
@@ -147,16 +157,16 @@
 
             <td>
               <div class="description-cell">
-                {{ projet.partenaire }}
+                {{ projet.partenaire || "—" }}
               </div>
             </td>
 
             <td>
               <span
                 class="permission-chip"
-                [class.permission-chip-more]="projet.statut !== 'En cours'"
+                [class.permission-chip-more]="!isActiveProject(projet)"
               >
-                {{ projet.statut }}
+                {{ getStatutLabel(projet) }}
               </span>
             </td>
 
@@ -166,7 +176,8 @@
                   mat-icon-button
                   class="action-icon"
                   (click)="onView(projet)"
-                  aria-label="Voir"
+                  aria-label="Vue d'ensemble"
+                  matTooltip="Vue d'ensemble"
                 >
                   <mat-icon>visibility</mat-icon>
                 </button>
@@ -174,8 +185,19 @@
                 <button
                   mat-icon-button
                   class="action-icon"
+                  (click)="onOpenDevisInterne(projet)"
+                  aria-label="Devis Interne"
+                  matTooltip="Devis Interne"
+                >
+                  <mat-icon>request_quote</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  class="action-icon"
                   (click)="onEdit(projet)"
                   aria-label="Modifier"
+                  matTooltip="Modifier"
                 >
                   <mat-icon>edit</mat-icon>
                 </button>
@@ -185,6 +207,7 @@
                   class="action-icon delete"
                   (click)="onDelete(projet)"
                   aria-label="Supprimer"
+                  matTooltip="Supprimer"
                 >
                   <mat-icon>delete</mat-icon>
                 </button>

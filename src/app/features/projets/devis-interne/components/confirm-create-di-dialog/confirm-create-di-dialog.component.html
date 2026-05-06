@@ -1,0 +1,32 @@
+<div class="confirm-dialog">
+  <div class="dialog-icon">
+    <mat-icon>help_outline</mat-icon>
+  </div>
+
+  <h2>Créer le Devis Interne ?</h2>
+
+  <p>
+    Un Devis Interne sera créé pour ce projet. Vous pourrez ensuite ajouter des
+    lignes d’honoraires, suivre les coûts internes et calculer la marge.
+  </p>
+
+  <div class="dialog-info">
+    <div>
+      <span>Code projet</span>
+      <strong>{{ data.codeProjet || "Projet sélectionné" }}</strong>
+    </div>
+
+    <div>
+      <span>Statut initial</span>
+      <strong>Brouillon</strong>
+    </div>
+  </div>
+
+  <div class="dialog-actions">
+    <button mat-stroked-button type="button" (click)="cancel()">Annuler</button>
+
+    <button mat-flat-button color="primary" type="button" (click)="confirm()">
+      Confirmer la création
+    </button>
+  </div>
+</div>

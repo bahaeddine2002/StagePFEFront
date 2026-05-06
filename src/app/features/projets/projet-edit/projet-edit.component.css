@@ -1,0 +1,54 @@
+/* projet-edit.component.css */
+
+.full-field {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.money-field {
+  width: 100%;
+}
+
+.money-field ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+.toggle-value {
+  min-height: 52px;
+}
+
+.edit-footer-actions {
+  max-width: 1380px;
+  margin: 24px auto 0;
+  padding: 18px 0 0;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+::ng-deep .fiche-page .mat-mdc-form-field {
+  width: 100%;
+}
+
+::ng-deep .fiche-page .mat-mdc-text-field-wrapper {
+  background: #f5f7fb !important;
+  border-radius: 7px !important;
+}
+
+::ng-deep .fiche-page .mat-mdc-form-field-subscript-wrapper {
+  min-height: 18px;
+}
+
+::ng-deep .fiche-page .mat-mdc-select-value,
+::ng-deep .fiche-page input.mat-mdc-input-element,
+::ng-deep .fiche-page textarea.mat-mdc-input-element {
+  color: #102033 !important;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .edit-footer-actions {
+    flex-direction: column;
+  }
+}

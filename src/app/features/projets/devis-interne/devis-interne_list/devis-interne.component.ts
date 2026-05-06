@@ -1,33 +1,18 @@
 import { Component, OnInit } from "@angular/core";
 import { AppDrawerService } from "src/app/shared/services/app-drawer.service";
-
-export interface DiLine {
-  id: number;
-  section: "HONORAIRES" | "AUTRES_FRAIS" | "RISQUE_ESTIME";
-  type: "line" | "subtotal" | "total";
-
-  designation: string;
-  subtitle?: string;
-
-  venduClient: number;
-  interne: number;
-  charges: number;
-  coutFinal: number;
-  margeMontant: number;
-  margePourcentage: number;
-
-  unite?: string;
-  chargeEstimee?: number;
-  prixUnitaire?: number;
-  ressourceProposee?: string;
-  ressourceRetenue?: string;
-  quantiteInterne?: number;
-  coutUnitaire?: number;
-  fraisDirects?: number;
-  fraisGeneraux?: number;
-  impotsEtTaxes?: number;
-  commentaire?: string;
-}
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogRef,
+} from "@angular/material/dialog";
+import {
+  DevisInterneResponse,
+  LigneDevisInterneResponse,
+} from "../../models/devis-interne";
+import { ActivatedRoute, Router } from "@angular/router";
+import { DevisInterneService } from "../../services/devis-interne.service";
+import { finalize } from "rxjs";
+import { ConfirmCreateDiDialogComponent } from "../components/confirm-create-di-dialog/confirm-create-di-dialog.component";
 
 @Component({
   selector: "app-devis-interne",
@@ -35,224 +20,157 @@ export interface DiLine {
   styleUrls: ["./devis-interne.component.css"],
 })
 export class DevisInterneComponent implements OnInit {
-  isDrawerOpen = false;
-  selectedLineTitle = "Chef de projet";
-  selectedLineIsNegative = false;
-  selectedLine?: DiLine;
+  projetId!: number;
 
-  diLines: DiLine[] = [
-    {
-      id: 1,
-      section: "HONORAIRES",
-      type: "line",
-      designation: "Chef de projet",
-      subtitle: "Honoraires ST2i",
-      venduClient: 15400,
-      interne: 2866.235,
-      charges: 0,
-      coutFinal: 2866.235,
-      margeMontant: 12533.765,
-      margePourcentage: 81.39,
-      unite: "H-Jour",
-      chargeEstimee: 22,
-      prixUnitaire: 700,
-      ressourceProposee: "Ahmed BERRED",
-      ressourceRetenue: "Ahmed BERRED",
-      quantiteInterne: 2,
-      coutUnitaire: 1433.118,
-      fraisDirects: 0,
-      fraisGeneraux: 0,
-      impotsEtTaxes: 0,
-      commentaire: "Aucune remarque particulière pour cette ressource.",
-    },
-    {
-      id: 2,
-      section: "HONORAIRES",
-      type: "line",
-      designation: "Consultant technique",
-      subtitle: "Développeur",
-      venduClient: 56000,
-      interne: 23746,
-      charges: 0,
-      coutFinal: 23746,
-      margeMontant: 32254,
-      margePourcentage: 57.6,
-      unite: "H-Jour",
-      chargeEstimee: 112,
-      prixUnitaire: 500,
-      ressourceProposee: "Marwen SAIDI",
-      ressourceRetenue: "Marwen SAIDI",
-      quantiteInterne: 43,
-      coutUnitaire: 552.232,
-      fraisDirects: 0,
-      fraisGeneraux: 0,
-      impotsEtTaxes: 0,
-      commentaire: "Profil technique retenu pour le développement.",
-    },
-    {
-      id: 3,
-      section: "HONORAIRES",
-      type: "line",
-      designation: "Formateur",
-      subtitle: "Formation utilisateur",
-      venduClient: 1500,
-      interne: 20497,
-      charges: 0,
-      coutFinal: 20497,
-      margeMontant: -18997,
-      margePourcentage: -1266.47,
-      unite: "H-Jour",
-      chargeEstimee: 5,
-      prixUnitaire: 300,
-      ressourceProposee: "Dorsaf Babay",
-      ressourceRetenue: "Syrine DRIDI",
-      quantiteInterne: 131,
-      coutUnitaire: 156.466,
-      fraisDirects: 0,
-      fraisGeneraux: 0,
-      impotsEtTaxes: 0,
-      commentaire: "Le coût final dépasse le montant vendu client.",
-    },
-    {
-      id: 4,
-      section: "HONORAIRES",
-      type: "subtotal",
-      designation: "Sous-total Honoraires",
-      venduClient: 72900,
-      interne: 57551,
-      charges: 0,
-      coutFinal: 57551,
-      margeMontant: 15349,
-      margePourcentage: 21.05,
-    },
-    {
-      id: 5,
-      section: "AUTRES_FRAIS",
-      type: "line",
-      designation: "Frais de séjour",
-      subtitle: "Mission",
-      venduClient: 0,
-      interne: 0,
-      charges: 0,
-      coutFinal: 0,
-      margeMontant: 0,
-      margePourcentage: 0,
-      unite: "Jour",
-      chargeEstimee: 0,
-      prixUnitaire: 0,
-      ressourceRetenue: "Non affecté",
-      quantiteInterne: 0,
-      coutUnitaire: 0,
-      fraisDirects: 0,
-      fraisGeneraux: 0,
-      impotsEtTaxes: 0,
-    },
-    {
-      id: 6,
-      section: "AUTRES_FRAIS",
-      type: "line",
-      designation: "Voyage",
-      subtitle: "Déplacement",
-      venduClient: 0,
-      interne: 0,
-      charges: 0,
-      coutFinal: 0,
-      margeMontant: 0,
-      margePourcentage: 0,
-      unite: "Unité",
-      chargeEstimee: 0,
-      prixUnitaire: 0,
-      ressourceRetenue: "Non affecté",
-      quantiteInterne: 0,
-      coutUnitaire: 0,
-      fraisDirects: 0,
-      fraisGeneraux: 0,
-      impotsEtTaxes: 0,
-    },
-    {
-      id: 7,
-      section: "AUTRES_FRAIS",
-      type: "subtotal",
-      designation: "Sous-total Autres frais",
-      venduClient: 0,
-      interne: 0,
-      charges: 0,
-      coutFinal: 0,
-      margeMontant: 0,
-      margePourcentage: 0,
-    },
-    {
-      id: 8,
-      section: "RISQUE_ESTIME",
-      type: "line",
-      designation: "Risque estimé 5%",
-      subtitle: "Provision risque projet",
-      venduClient: 0,
-      interne: 0,
-      charges: 0,
-      coutFinal: 0,
-      margeMontant: 0,
-      margePourcentage: 0,
-    },
-    {
-      id: 9,
-      section: "RISQUE_ESTIME",
-      type: "total",
-      designation: "Total général",
-      venduClient: 72900,
-      interne: 57551,
-      charges: 0,
-      coutFinal: 57551,
-      margeMontant: 15349,
-      margePourcentage: 21.05,
-    },
-  ];
+  devisInterne: DevisInterneResponse | null = null;
+  isHonoraireDrawerOpen = false;
+  selectedLine: LigneDevisInterneResponse | null = null;
+  isDetailsDrawerOpen = false;
 
-  trackByLineId(index: number, line: DiLine): number {
-    return line.id;
+  isLoading = false;
+  isCreating = false;
+  hasNoDi = false;
+
+  searchTerm = "";
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private dialog: MatDialog,
+    private devisInterneService: DevisInterneService,
+  ) {}
+
+  ngOnInit(): void {
+    this.projetId = Number(this.route.snapshot.paramMap.get("id"));
+    this.loadDevisInterne();
   }
 
-  get totalDevis(): number {
-    return 72900;
+  loadDevisInterne(): void {
+    this.isLoading = true;
+    this.hasNoDi = false;
+
+    this.devisInterneService
+      .getByProjetId(this.projetId)
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: (response) => {
+          this.devisInterne = response;
+          this.hasNoDi = false;
+        },
+        error: (error) => {
+          if (error.status === 500) {
+            this.devisInterne = null;
+            this.hasNoDi = true;
+            return;
+          }
+
+          console.error("Erreur lors du chargement du DI", error);
+        },
+      });
   }
 
-  get coutFinal(): number {
-    return 57551;
+  openCreateDialog(): void {
+    const dialogRef = this.dialog.open(ConfirmCreateDiDialogComponent, {
+      width: "520px",
+      maxWidth: "95vw",
+      disableClose: true,
+      data: {
+        codeProjet: this.devisInterne?.codeProjet,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((confirmed: boolean) => {
+      if (confirmed) {
+        this.createDevisInterne();
+      }
+    });
   }
 
-  get margeGlobale(): number {
-    return 21.05;
+  createDevisInterne(): void {
+    this.isCreating = true;
+
+    this.devisInterneService
+      .createForProjet(this.projetId)
+      .pipe(finalize(() => (this.isCreating = false)))
+      .subscribe({
+        next: (response) => {
+          this.devisInterne = response;
+          this.hasNoDi = false;
+        },
+        error: (error) => {
+          console.error("Erreur lors de la création du DI", error);
+        },
+      });
   }
 
-  formatMoney(value: number): string {
+  goBack(): void {
+    this.router.navigate(["/projets"]);
+  }
+
+  openAddHonoraireDrawer(): void {
+    this.isHonoraireDrawerOpen = true;
+  }
+
+  closeHonoraireDrawer(): void {
+    this.isHonoraireDrawerOpen = false;
+  }
+
+  openDetailsDrawer(line: LigneDevisInterneResponse): void {
+    this.selectedLine = line;
+    this.isDetailsDrawerOpen = true;
+  }
+
+  closeDetailsDrawer(): void {
+    this.isDetailsDrawerOpen = false;
+    this.selectedLine = null;
+  }
+
+  onHonoraireSaved(updatedDi: DevisInterneResponse): void {
+    this.devisInterne = updatedDi;
+    this.isHonoraireDrawerOpen = false;
+  }
+
+  editLine(line: LigneDevisInterneResponse): void {
+    // Later
+    console.log("Edit line", line);
+  }
+
+  deleteLine(line: LigneDevisInterneResponse): void {
+    // Later
+    console.log("Delete line", line);
+  }
+
+  get lignes(): LigneDevisInterneResponse[] {
+    return this.devisInterne?.lignes ?? [];
+  }
+
+  get hasLines(): boolean {
+    return this.lignes.length > 0;
+  }
+
+  formatMoney(value?: number | null): string {
+    const amount = value ?? 0;
+
     return new Intl.NumberFormat("fr-FR", {
       minimumFractionDigits: 3,
       maximumFractionDigits: 3,
-    }).format(value);
+    }).format(amount);
   }
 
-  formatPercent(value: number): string {
+  formatPercent(value?: number | null): string {
+    const amount = value ?? 0;
+
     return new Intl.NumberFormat("fr-FR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(value);
+    }).format(amount);
   }
 
-  isNegative(line: DiLine): boolean {
-    return line.margeMontant < 0;
+  isNegative(value?: number | null): boolean {
+    return (value ?? 0) < 0;
   }
 
-  openDrawer(line: DiLine): void {
-    this.selectedLine = line;
-    this.isDrawerOpen = true;
+  trackByLineId(index: number, line: LigneDevisInterneResponse): number {
+    return line.id;
   }
-
-  closeDrawer(): void {
-    this.isDrawerOpen = false;
-    this.selectedLine = undefined;
-  }
-
-  constructor(private drawer: AppDrawerService) {}
-
-  ngOnInit(): void {}
 }

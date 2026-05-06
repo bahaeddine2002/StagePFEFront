@@ -1,5 +1,4 @@
 <div class="page-container">
-  <!-- Breadcrumb -->
   <nav class="breadcrumb">
     <span>Projets</span>
     <mat-icon>chevron_right</mat-icon>
@@ -8,567 +7,363 @@
     <span class="active">Devis Interne</span>
   </nav>
 
-  <!-- Header -->
   <header class="page-header">
     <div class="page-header-text">
       <div class="page-title-row">
         <h1 class="page-title">Devis Interne du projet</h1>
-        <span class="project-code-chip">A25001</span>
-        <span class="permission-chip">En cours</span>
+
+        <span class="project-code-chip" *ngIf="devisInterne?.codeProjet">
+          {{ devisInterne?.codeProjet }}
+        </span>
+
+        <span class="permission-chip" *ngIf="devisInterne"> Brouillon </span>
       </div>
 
-      <p class="page-subtitle">
+      <p class="page-subtitle" *ngIf="!hasNoDi">
         Analyse du vendu client, de la réalisation interne, des charges et de la
         marge nette du projet.
+      </p>
+
+      <p class="page-subtitle" *ngIf="hasNoDi">
+        Ce projet ne possède pas encore de Devis Interne.
       </p>
     </div>
 
     <div class="header-actions">
-      <button mat-stroked-button class="btn-secondary">
+      <button mat-stroked-button class="btn-secondary" (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
         Retour
       </button>
 
-      <button mat-stroked-button class="btn-secondary">
+      <button
+        mat-flat-button
+        class="btn-primary"
+        *ngIf="hasNoDi"
+        [disabled]="isCreating"
+        (click)="openCreateDialog()"
+      >
+        <mat-icon>add_circle_outline</mat-icon>
+        Créer le Devis Interne
+      </button>
+
+      <button mat-stroked-button class="btn-secondary" *ngIf="devisInterne">
         <mat-icon>download</mat-icon>
         Exporter Excel
-      </button>
-
-      <button mat-stroked-button class="btn-secondary">
-        <mat-icon>edit</mat-icon>
-        Modifier
-      </button>
-
-      <button mat-flat-button class="btn-primary">
-        <mat-icon>check</mat-icon>
-        Valider le DI
       </button>
     </div>
   </header>
 
-  <!-- Stats -->
-  <section class="stats-grid">
-    <article class="stat-card accent-line">
-      <div class="stat-content">
-        <p class="stat-label">Total devis vendu</p>
-        <h2 class="stat-value stat-money">
-          {{ formatMoney(totalDevis) }}
-          <span>TND</span>
-        </h2>
-        <div class="stat-footer muted">
-          <span>Montant vendu au client</span>
-        </div>
-      </div>
-
-      <div class="stat-visual">
-        <mat-icon>request_quote</mat-icon>
-      </div>
-    </article>
-
-    <article class="stat-card accent-line neutral-accent">
-      <div class="stat-content">
-        <p class="stat-label">Coût final interne</p>
-        <h2 class="stat-value stat-money">
-          {{ formatMoney(coutFinal) }}
-          <span>TND</span>
-        </h2>
-        <div class="stat-footer muted">
-          <span>Coût après charges et fiscalité</span>
-        </div>
-      </div>
-
-      <div class="stat-visual">
-        <mat-icon>calculate</mat-icon>
-      </div>
-    </article>
-
-    <article class="stat-card success-accent">
-      <div class="stat-content">
-        <p class="stat-label">Marge nette globale</p>
-        <h2 class="stat-value stat-percent">
-          {{ formatPercent(margeGlobale) }}%
-        </h2>
-        <div class="stat-footer positive">
-          <mat-icon>trending_up</mat-icon>
-          <span>Projet rentable</span>
-        </div>
-      </div>
-
-      <div class="stat-visual">
-        <mat-icon>show_chart</mat-icon>
-      </div>
-    </article>
+  <section class="loading-state" *ngIf="isLoading">
+    <mat-spinner diameter="42"></mat-spinner>
+    <p>Chargement du Devis Interne...</p>
   </section>
 
-  <!-- Warning -->
-  <section class="warning-card">
-    <mat-icon>warning_amber</mat-icon>
-    <span>
-      Certaines lignes présentent une marge négative. Vérifiez les coûts avant
-      validation.
-    </span>
-  </section>
-
-  <!-- Toolbar -->
-  <section class="toolbar-card di-toolbar">
-    <div class="toolbar-left">
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Rechercher une ligne</mat-label>
-        <mat-icon matPrefix>search</mat-icon>
-        <input
-          matInput
-          type="text"
-          placeholder="Rechercher une désignation ou une ressource..."
-        />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" class="filter-field">
-        <mat-label>Section</mat-label>
-        <mat-select value="all">
-          <mat-option value="all">Toutes</mat-option>
-          <mat-option value="honoraires">Honoraires</mat-option>
-          <mat-option value="frais">Autres frais</mat-option>
-          <mat-option value="risque">Risque estimé</mat-option>
-        </mat-select>
-      </mat-form-field>
-
-      <div class="negative-toggle">
-        <mat-slide-toggle></mat-slide-toggle>
-        <span>Afficher uniquement les marges négatives</span>
-      </div>
+  <section class="empty-di-card" *ngIf="!isLoading && hasNoDi">
+    <div class="empty-icon">
+      <mat-icon>assignment</mat-icon>
     </div>
 
-    <div class="toolbar-right">
-      <button mat-stroked-button class="btn-secondary">
-        <mat-icon>view_column</mat-icon>
-        Colonnes
+    <h2>Aucun Devis Interne trouvé</h2>
+
+    <p>
+      Le Devis Interne est essentiel pour piloter la rentabilité du projet.
+      Créez-en un dès maintenant pour commencer à planifier vos ressources et
+      suivre vos marges prévisionnelles.
+    </p>
+
+    <div class="empty-actions">
+      <button
+        mat-flat-button
+        class="btn-primary"
+        [disabled]="isCreating"
+        (click)="openCreateDialog()"
+      >
+        <mat-icon>add_circle_outline</mat-icon>
+        Créer le Devis Interne
       </button>
 
-      <button mat-flat-button class="btn-primary">
-        <mat-icon>add</mat-icon>
-        Ajouter une ligne
+      <button mat-stroked-button class="btn-secondary" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Retour à la liste des projets
       </button>
     </div>
   </section>
 
-  <!-- Table -->
-  <section class="table-card">
-    <div class="table-wrapper">
-      <table class="roles-table di-table">
-        <thead>
-          <tr>
-            <th>DÉSIGNATION</th>
-            <th>VENDU CLIENT</th>
-            <th>INTERNE</th>
-            <th>CHARGES</th>
-            <th>RÉSULTAT</th>
-            <th class="actions-col">ACTIONS</th>
-          </tr>
-        </thead>
+  <ng-container *ngIf="!isLoading && devisInterne">
+    <section class="stats-grid">
+      <article class="stat-card accent-line">
+        <div class="stat-content">
+          <p class="stat-label">Total devis vendu</p>
+          <h2 class="stat-value stat-money">
+            {{ formatMoney(devisInterne.totalMontantTnd) }}
+            <span>TND</span>
+          </h2>
+          <div class="stat-footer muted">
+            <span>Montant vendu au client</span>
+          </div>
+        </div>
 
-        <tbody>
-          <ng-container *ngFor="let line of diLines; trackBy: trackByLineId">
-            <!-- Section headers -->
-            <tr
-              class="section-row"
-              *ngIf="line.id === 1 || line.id === 5 || line.id === 8"
-            >
+        <div class="stat-visual">
+          <mat-icon>request_quote</mat-icon>
+        </div>
+      </article>
+
+      <article class="stat-card accent-line neutral-accent">
+        <div class="stat-content">
+          <p class="stat-label">Coût final interne</p>
+          <h2 class="stat-value stat-money">
+            {{ formatMoney(devisInterne.totalCoutFinal) }}
+            <span>TND</span>
+          </h2>
+          <div class="stat-footer muted">
+            <span>Coût après charges et fiscalité</span>
+          </div>
+        </div>
+
+        <div class="stat-visual">
+          <mat-icon>calculate</mat-icon>
+        </div>
+      </article>
+
+      <article class="stat-card success-accent">
+        <div class="stat-content">
+          <p class="stat-label">Marge nette globale</p>
+          <h2
+            class="stat-value stat-percent"
+            [class.negative-title]="
+              isNegative(devisInterne.totalMargeNetteMontant)
+            "
+          >
+            {{ formatPercent(devisInterne.totalMargeNettePourcentage) }}%
+          </h2>
+          <div class="stat-footer muted">
+            <span>
+              {{ formatMoney(devisInterne.totalMargeNetteMontant) }} TND
+            </span>
+          </div>
+        </div>
+
+        <div class="stat-visual">
+          <mat-icon>show_chart</mat-icon>
+        </div>
+      </article>
+    </section>
+
+    <section class="toolbar-card di-toolbar">
+      <div class="toolbar-left">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher une ligne</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            type="text"
+            [(ngModel)]="searchTerm"
+            placeholder="Rechercher une désignation ou une ressource..."
+          />
+        </mat-form-field>
+      </div>
+
+      <div class="toolbar-right">
+        <button mat-stroked-button class="btn-secondary">
+          <mat-icon>download</mat-icon>
+          Exporter
+        </button>
+
+        <button
+          mat-flat-button
+          class="btn-primary"
+          (click)="openAddHonoraireDrawer()"
+        >
+          <mat-icon>person_add</mat-icon>
+          Ajouter une ligne honoraire
+        </button>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <div class="table-wrapper">
+        <table class="roles-table di-table">
+          <thead>
+            <tr>
+              <th>DÉSIGNATION / PROFIL</th>
+              <th>VENDU CLIENT</th>
+              <th>INTERNE</th>
+              <th>COÛT FINAL</th>
+              <th>MARGE</th>
+              <th class="actions-col">ACTIONS</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr class="section-row">
+              <td colspan="6">HONORAIRES</td>
+            </tr>
+
+            <tr *ngIf="!hasLines">
               <td colspan="6">
-                {{
-                  line.section === "HONORAIRES"
-                    ? "HONORAIRES"
-                    : line.section === "AUTRES_FRAIS"
-                      ? "AUTRES FRAIS"
-                      : "RISQUE ESTIMÉ"
-                }}
+                <div class="empty-table-state">
+                  <mat-icon>playlist_add</mat-icon>
+                  <strong>Aucune ligne d’honoraires ajoutée</strong>
+                  <button
+                    mat-button
+                    color="primary"
+                    (click)="openAddHonoraireDrawer()"
+                  >
+                    Cliquez ici pour ajouter votre premier profil
+                  </button>
+                </div>
               </td>
             </tr>
 
-            <!-- Normal line -->
             <tr
-              *ngIf="line.type === 'line'"
-              [class.negative-row]="isNegative(line)"
+              *ngFor="let line of lignes; trackBy: trackByLineId"
+              [class.negative-row]="isNegative(line.margeNetteMontant)"
             >
               <td>
                 <div class="role-text">
                   <div
                     class="role-name"
-                    [class.negative-title]="isNegative(line)"
+                    [class.negative-title]="isNegative(line.margeNetteMontant)"
                   >
                     {{ line.designation }}
                   </div>
-                  <div class="role-module">{{ line.subtitle }}</div>
+                  <div class="role-module">
+                    {{
+                      line.resourceRetenuNomComplet || "Ressource non résolue"
+                    }}
+                    · {{ line.anneeTccUtilisee }}
+                  </div>
                 </div>
               </td>
 
               <td>
                 <div class="value-cell">
-                  <strong>{{ formatMoney(line.venduClient) }} TND</strong>
-                  <span>Montant vendu client</span>
-                </div>
-              </td>
-
-              <td>
-                <div class="value-cell">
-                  <strong>{{ formatMoney(line.interne) }} TND</strong>
+                  <strong>{{ formatMoney(line.montantTotalTnd) }} TND</strong>
                   <span>
-                    {{ line.ressourceRetenue || "Réalisation interne" }}
+                    {{ line.chargeEstimee }} {{ line.unite }} ×
+                    {{ formatMoney(line.prixUnitaire) }}
                   </span>
                 </div>
               </td>
 
               <td>
                 <div class="value-cell">
-                  <strong>{{ formatMoney(line.charges) }} TND</strong>
-                  <span>FD + FG + Taxes</span>
+                  <strong>{{ formatMoney(line.prixRevient) }} TND</strong>
+                  <span>
+                    {{ line.quantite }} {{ line.unite }} ×
+                    {{ formatMoney(line.coutUnitaireInterneUtilise) }}
+                  </span>
+                </div>
+              </td>
+
+              <td>
+                <div class="value-cell">
+                  <strong>{{ formatMoney(line.coutFinal) }} TND</strong>
+                  <span>
+                    HT {{ formatMoney(line.coutHorsTaxes) }} · Impôts
+                    {{ formatMoney(line.coutDesImpots) }}
+                  </span>
                 </div>
               </td>
 
               <td>
                 <div
                   class="result-cell"
-                  [class.positive-result]="line.margeMontant > 0"
-                  [class.negative-result]="line.margeMontant < 0"
-                  [class.neutral-result]="line.margeMontant === 0"
+                  [class.positive-result]="line.margeNetteMontant > 0"
+                  [class.negative-result]="line.margeNetteMontant < 0"
+                  [class.neutral-result]="line.margeNetteMontant === 0"
                 >
-                  <span class="formula-muted">
-                    Coût final : {{ formatMoney(line.coutFinal) }} TND
-                  </span>
-
                   <strong>
-                    {{ line.margeMontant > 0 ? "+" : ""
-                    }}{{ formatMoney(line.margeMontant) }}
-                    TND
+                    {{ line.margeNetteMontant > 0 ? "+" : "" }}
+                    {{ formatMoney(line.margeNetteMontant) }} TND
                   </strong>
 
                   <span class="result-badge">
-                    {{ formatPercent(line.margePourcentage) }}%
+                    {{ formatPercent(line.margeNettePourcentage) }}%
                   </span>
                 </div>
               </td>
 
               <td class="actions-col">
-                <div class="actions-cell vertical-actions">
+                <div class="actions-cell">
                   <button
-                    mat-stroked-button
-                    class="btn-row-action"
-                    (click)="openDrawer(line)"
+                    mat-icon-button
+                    type="button"
+                    (click)="openDetailsDrawer(line)"
                   >
-                    Voir détails
+                    <mat-icon>visibility</mat-icon>
                   </button>
 
-                  <button mat-stroked-button class="btn-row-action">
-                    Modifier
+                  <button mat-icon-button (click)="editLine(line)">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    (click)="deleteLine(line)"
+                  >
+                    <mat-icon>delete</mat-icon>
                   </button>
                 </div>
               </td>
             </tr>
 
-            <!-- Subtotal -->
-            <tr *ngIf="line.type === 'subtotal'" class="subtotal-row">
-              <td>
-                <strong>{{ line.designation | uppercase }}</strong>
-              </td>
-
-              <td>
-                <span>Total vendu</span>
-                <strong>{{ formatMoney(line.venduClient) }} TND</strong>
-              </td>
-
-              <td>
-                <span>Total interne</span>
-                <strong>{{ formatMoney(line.interne) }} TND</strong>
-              </td>
-
-              <td>
-                <span>Total charges</span>
-                <strong>{{ formatMoney(line.charges) }} TND</strong>
-              </td>
-
-              <td>
-                <span>Coût final : {{ formatMoney(line.coutFinal) }} TND</span>
-                <strong [class.positive-text]="line.margeMontant > 0">
-                  Marge : {{ formatMoney(line.margeMontant) }} TND /
-                  {{ formatPercent(line.margePourcentage) }}%
-                </strong>
-              </td>
-
-              <td></td>
-            </tr>
-
-            <!-- Total -->
-            <tr *ngIf="line.type === 'total'" class="total-row">
+            <tr class="total-row">
               <td>
                 <strong>TOTAL GÉNÉRAL</strong>
               </td>
 
               <td>
-                <span>Total vendu devis</span>
-                <strong>{{ formatMoney(line.venduClient) }} TND</strong>
+                <span>Total vendu</span>
+                <strong
+                  >{{ formatMoney(devisInterne.totalMontantTnd) }} TND</strong
+                >
               </td>
 
               <td>
-                <span>Prix de revient total</span>
-                <strong>{{ formatMoney(line.interne) }} TND</strong>
-              </td>
-
-              <td>
-                <span>Total charges & taxes</span>
-                <strong>{{ formatMoney(line.charges) }} TND</strong>
+                <span>Prix de revient</span>
+                <strong
+                  >{{ formatMoney(devisInterne.totalPrixRevient) }} TND</strong
+                >
               </td>
 
               <td>
                 <span>Coût final</span>
-                <strong>{{ formatMoney(line.coutFinal) }} TND</strong>
+                <strong
+                  >{{ formatMoney(devisInterne.totalCoutFinal) }} TND</strong
+                >
+              </td>
+
+              <td>
+                <span>Marge nette</span>
+                <strong>
+                  {{ formatMoney(devisInterne.totalMargeNetteMontant) }} TND
+                </strong>
                 <small>
-                  Marge nette : {{ formatMoney(line.margeMontant) }} TND /
-                  {{ formatPercent(line.margePourcentage) }}%
+                  {{ formatPercent(devisInterne.totalMargeNettePourcentage) }}%
                 </small>
               </td>
 
               <td></td>
             </tr>
-          </ng-container>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- Drawer overlay -->
-  <div
-    class="drawer-overlay"
-    *ngIf="isDrawerOpen && selectedLine"
-    (click)="closeDrawer()"
-  ></div>
-
-  <!-- Drawer -->
-  <aside class="di-drawer" *ngIf="isDrawerOpen && selectedLine">
-    <header class="drawer-header">
-      <div>
-        <div class="drawer-title-row">
-          <h2>Détails de la ligne DI</h2>
-
-          <span
-            class="drawer-status"
-            [class.negative]="isNegative(selectedLine)"
-          >
-            {{ isNegative(selectedLine) ? "Marge négative" : "Marge positive" }}
-          </span>
-        </div>
-
-        <p>{{ selectedLine.designation }} — {{ selectedLine.subtitle }}</p>
+          </tbody>
+        </table>
       </div>
+    </section>
+  </ng-container>
 
-      <button mat-icon-button class="drawer-close" (click)="closeDrawer()">
-        <mat-icon>close</mat-icon>
-      </button>
-    </header>
+  <app-honoraire-line-drawer
+    *ngIf="isHonoraireDrawerOpen && devisInterne"
+    [devisInterne]="devisInterne"
+    (closed)="closeHonoraireDrawer()"
+    (saved)="onHonoraireSaved($event)"
+  ></app-honoraire-line-drawer>
 
-    <div class="drawer-body">
-      <section class="drawer-warning" *ngIf="isNegative(selectedLine)">
-        <mat-icon>warning_amber</mat-icon>
-        <span>
-          Cette ligne présente une marge négative. Vérifiez la quantité interne,
-          le coût unitaire ou le prix vendu au client.
-        </span>
-      </section>
-
-      <!-- 01 Vendu client -->
-      <article class="drawer-card">
-        <div class="drawer-card-title blue-title">
-          <span>01</span>
-          <h3>Vendu au client</h3>
-        </div>
-
-        <div class="drawer-grid">
-          <div class="drawer-field">
-            <span>Désignation</span>
-            <strong>{{ selectedLine.designation }}</strong>
-          </div>
-
-          <div class="drawer-field">
-            <span>Unité</span>
-            <strong>{{ selectedLine.unite || "—" }}</strong>
-          </div>
-
-          <div class="drawer-field">
-            <span>Charge estimée</span>
-            <strong>{{ selectedLine.chargeEstimee || 0 }}</strong>
-          </div>
-
-          <div class="drawer-field">
-            <span>Prix unitaire</span>
-            <strong
-              >{{ formatMoney(selectedLine.prixUnitaire || 0) }} TND</strong
-            >
-          </div>
-
-          <div class="drawer-field">
-            <span>Devise projet</span>
-            <strong>TND</strong>
-          </div>
-
-          <div class="drawer-field">
-            <span>Taux de change</span>
-            <strong>1</strong>
-          </div>
-        </div>
-
-        <div class="drawer-total-line">
-          <span>Montant total vendu</span>
-          <strong>{{ formatMoney(selectedLine.venduClient) }} TND</strong>
-        </div>
-      </article>
-
-      <!-- 02 Réalisation interne -->
-      <article class="drawer-card">
-        <div class="drawer-card-title slate-title">
-          <span>02</span>
-          <h3>Réalisation interne</h3>
-        </div>
-
-        <div class="drawer-grid">
-          <div class="drawer-field">
-            <span>Ressource proposée</span>
-            <strong>{{ selectedLine.ressourceProposee || "—" }}</strong>
-          </div>
-
-          <div class="drawer-field">
-            <span>Ressource retenue</span>
-            <strong>{{ selectedLine.ressourceRetenue || "—" }}</strong>
-          </div>
-
-          <div class="drawer-field">
-            <span>Quantité interne</span>
-            <strong>{{ selectedLine.quantiteInterne || 0 }}</strong>
-          </div>
-
-          <div class="drawer-field">
-            <span>Coût unitaire</span>
-            <strong
-              >{{ formatMoney(selectedLine.coutUnitaire || 0) }} TND</strong
-            >
-          </div>
-        </div>
-
-        <div class="drawer-total-line">
-          <span>Prix de revient</span>
-          <strong>{{ formatMoney(selectedLine.interne) }} TND</strong>
-        </div>
-      </article>
-
-      <!-- 03 Fiscalité -->
-      <article class="drawer-card">
-        <div class="drawer-card-title red-title">
-          <span>03</span>
-          <h3>Fiscalité & charges</h3>
-        </div>
-
-        <div class="drawer-grid">
-          <div class="drawer-field">
-            <span>Frais directs</span>
-            <strong
-              >{{ formatMoney(selectedLine.fraisDirects || 0) }} TND</strong
-            >
-          </div>
-
-          <div class="drawer-field">
-            <span>Frais généraux</span>
-            <strong
-              >{{ formatMoney(selectedLine.fraisGeneraux || 0) }} TND</strong
-            >
-          </div>
-
-          <div class="drawer-field">
-            <span>Coût hors taxes</span>
-            <strong>{{ formatMoney(selectedLine.coutFinal) }} TND</strong>
-          </div>
-
-          <div class="drawer-field">
-            <span>Impôts et taxes</span>
-            <strong
-              >{{ formatMoney(selectedLine.impotsEtTaxes || 0) }} TND</strong
-            >
-          </div>
-        </div>
-
-        <div class="tax-details">
-          <div class="tax-details-title">
-            <mat-icon>expand_more</mat-icon>
-            Détail des impôts et taxes
-          </div>
-
-          <div class="tax-grid">
-            <span>RS / IS : <strong>0,000</strong></span>
-            <span>IRPP / CNSS : <strong>0,000</strong></span>
-            <span>ENR : <strong>0,000</strong></span>
-            <span>REDEV : <strong>0,000</strong></span>
-          </div>
-        </div>
-
-        <div class="drawer-total-line">
-          <span>Coût final</span>
-          <strong>{{ formatMoney(selectedLine.coutFinal) }} TND</strong>
-        </div>
-      </article>
-
-      <!-- 04 Résultat -->
-      <article class="drawer-card">
-        <div
-          class="drawer-card-title"
-          [class.green-title]="!isNegative(selectedLine)"
-          [class.red-title]="isNegative(selectedLine)"
-        >
-          <span>04</span>
-          <h3>Résultat financier</h3>
-        </div>
-
-        <div
-          class="drawer-result-box"
-          [class.negative]="isNegative(selectedLine)"
-        >
-          <span>Marge nette</span>
-          <strong>
-            {{ formatMoney(selectedLine.venduClient) }} -
-            {{ formatMoney(selectedLine.coutFinal) }}
-            =
-            {{ selectedLine.margeMontant > 0 ? "+" : ""
-            }}{{ formatMoney(selectedLine.margeMontant) }}
-            TND
-          </strong>
-        </div>
-
-        <div
-          class="drawer-result-box"
-          [class.negative]="isNegative(selectedLine)"
-        >
-          <span>Marge nette %</span>
-          <strong>
-            {{ formatMoney(selectedLine.margeMontant) }} /
-            {{ formatMoney(selectedLine.venduClient) }}
-            =
-            {{ formatPercent(selectedLine.margePourcentage) }}%
-          </strong>
-        </div>
-
-        <div class="drawer-comment">
-          <span>Commentaire / remarque</span>
-          <p>
-            {{ selectedLine.commentaire || "Aucune remarque particulière." }}
-          </p>
-        </div>
-      </article>
-    </div>
-
-    <footer class="drawer-footer">
-      <button mat-stroked-button class="btn-secondary" (click)="closeDrawer()">
-        Fermer
-      </button>
-
-      <button mat-flat-button class="btn-primary">
-        <mat-icon>edit</mat-icon>
-        Modifier la ligne
-      </button>
-    </footer>
-  </aside>
+  <app-honoraire-line-details-drawer
+    *ngIf="isDetailsDrawerOpen && selectedLine"
+    [line]="selectedLine"
+    [deviseCode]="devisInterne?.deviseCode || 'TND'"
+    (closed)="closeDetailsDrawer()"
+  ></app-honoraire-line-details-drawer>
 </div>

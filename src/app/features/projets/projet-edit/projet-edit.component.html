@@ -1,0 +1,556 @@
+<div class="fiche-page">
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-card">
+    <mat-icon>hourglass_empty</mat-icon>
+    Chargement du projet à modifier...
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage && !loading" class="state-card error">
+    <mat-icon>error_outline</mat-icon>
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="form && !loading">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <span>Projets</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span>Liste des projets</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span>Fiche d'identification</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span class="active">Modifier</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="title-line">
+          <h1>Modifier la fiche d’identification</h1>
+
+          <span class="badge badge-code">
+            {{ form.get("codeProjet")?.value || "Projet" }}
+          </span>
+
+          <span class="badge badge-status">
+            <span class="status-dot"></span>
+            Modification
+          </span>
+        </div>
+
+        <p class="page-subtitle">
+          Mettez à jour les informations générales, la classification, le
+          planning, les budgets et les charges du projet.
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary" type="button" (click)="onBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour
+        </button>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="saving"
+          (click)="save()"
+        >
+          <mat-icon>save</mat-icon>
+          {{ saving ? "Enregistrement..." : "Enregistrer" }}
+        </button>
+      </div>
+    </div>
+
+    <form [formGroup]="form">
+      <!-- Main grid -->
+      <div class="fiche-grid">
+        <!-- LEFT COLUMN -->
+        <div class="left-column">
+          <!-- Informations générales -->
+          <section class="fiche-card accent-blue general-card">
+            <div class="card-header">
+              <span class="header-icon blue">
+                <mat-icon>info</mat-icon>
+              </span>
+              <h2>Informations générales</h2>
+            </div>
+
+            <div class="card-body">
+              <div class="fields-grid two">
+                <mat-form-field appearance="outline">
+                  <mat-label>Code projet</mat-label>
+                  <input matInput formControlName="codeProjet" />
+                  <mat-error *ngIf="hasError('codeProjet')">
+                    Le code projet est obligatoire.
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Contract ID</mat-label>
+                  <input matInput formControlName="contractId" />
+                </mat-form-field>
+              </div>
+
+              <div class="fields-grid two">
+                <mat-form-field appearance="outline">
+                  <mat-label>Client</mat-label>
+                  <input matInput formControlName="client" />
+                  <mat-error *ngIf="hasError('client')">
+                    Le client est obligatoire.
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Partenaire</mat-label>
+                  <input matInput formControlName="partenaire" />
+                </mat-form-field>
+              </div>
+
+              <mat-form-field appearance="outline" class="full-field">
+                <mat-label>Nom du projet</mat-label>
+                <input matInput formControlName="nomProjet" />
+                <mat-error *ngIf="hasError('nomProjet')">
+                  Le nom du projet est obligatoire.
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-field">
+                <mat-label>Description du projet</mat-label>
+                <textarea
+                  matInput
+                  rows="3"
+                  formControlName="descriptionProjet"
+                ></textarea>
+              </mat-form-field>
+
+              <div class="fields-grid two">
+                <mat-form-field appearance="outline">
+                  <mat-label>Bailleur de fonds</mat-label>
+                  <input matInput formControlName="bailleurDeFonds" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Chef de projet</mat-label>
+                  <mat-select formControlName="projectManagerId">
+                    <mat-option *ngFor="let user of users" [value]="user.id">
+                      {{ getUserFullName(user) }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="hasError('projectManagerId')">
+                    Le chef de projet est obligatoire.
+                  </mat-error>
+                </mat-form-field>
+              </div>
+            </div>
+          </section>
+
+          <!-- Budget initial & conversion -->
+          <section class="fiche-card accent-green">
+            <div class="card-header">
+              <span class="header-icon green">
+                <mat-icon>payments</mat-icon>
+              </span>
+              <h2>Budget initial & conversion</h2>
+            </div>
+
+            <div class="card-body">
+              <div class="fields-grid two">
+                <mat-form-field appearance="outline">
+                  <mat-label>Devise du projet</mat-label>
+                  <mat-select formControlName="deviseProjetId">
+                    <mat-option
+                      *ngFor="let devise of devises"
+                      [value]="devise.id"
+                    >
+                      {{ devise.code || devise.libelle }} -
+                      {{ devise.libelle || devise.code }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="hasError('deviseProjetId')">
+                    La devise est obligatoire.
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Taux de change vers TND</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    formControlName="tauxChangeVersTnd"
+                  />
+                  <mat-error *ngIf="hasError('tauxChangeVersTnd')">
+                    Le taux doit être supérieur à 0.
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="money-grid">
+                <div class="money-box">
+                  <label>Budget initial TO</label>
+
+                  <mat-form-field appearance="outline" class="money-field">
+                    <input
+                      matInput
+                      type="number"
+                      formControlName="budgetInitialTO"
+                    />
+                  </mat-form-field>
+
+                  <div class="money-secondary">
+                    ≈ {{ tnd(budgetInitialToTndPreview) }}
+                  </div>
+                </div>
+
+                <div class="money-box selected">
+                  <label>Budget ST2i</label>
+                  <div class="money-main">
+                    {{ money(budgetST2iPreview) }}
+                  </div>
+                  <div class="money-secondary">
+                    Calculé : Budget initial TO - licences/sous-traitance
+                  </div>
+                </div>
+
+                <div class="money-box">
+                  <label>Budget licences & sous-traitance</label>
+
+                  <mat-form-field appearance="outline" class="money-field">
+                    <input
+                      matInput
+                      type="number"
+                      formControlName="budgetLicencesSousTraitance"
+                    />
+                  </mat-form-field>
+                </div>
+
+                <div class="money-box total">
+                  <label>Budget total</label>
+                  <div class="money-main">
+                    {{ money(budgetTotalPreview) }}
+                  </div>
+                  <div class="money-secondary">
+                    ≈ {{ tnd(budgetTotalTndPreview) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Charges / Workload -->
+          <section class="fiche-card accent-blue">
+            <div class="card-header">
+              <span class="header-icon blue">
+                <mat-icon>groups</mat-icon>
+              </span>
+              <h2>Charges / Workload</h2>
+            </div>
+
+            <div class="card-body compact">
+              <div class="fields-grid four">
+                <mat-form-field appearance="outline">
+                  <mat-label>Workload initial</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    formControlName="workloadInitialJH"
+                  />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Workload avenants</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    formControlName="workloadAvenantsJH"
+                  />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Workload garantie</mat-label>
+                  <input
+                    matInput
+                    type="number"
+                    formControlName="workloadGarantieJH"
+                  />
+                </mat-form-field>
+
+                <div class="field-box">
+                  <label>Workload vendu avenants inclus</label>
+                  <div class="readonly-value calculated">
+                    {{ jh(workloadVenduAvenantsInclusPreview) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="right-column">
+          <!-- Classification -->
+          <section class="fiche-card accent-blue classification-card">
+            <div class="card-header">
+              <span class="header-icon blue">
+                <mat-icon>account_tree</mat-icon>
+              </span>
+              <h2>Classification</h2>
+            </div>
+
+            <div class="card-body compact">
+              <div class="fields-grid two">
+                <mat-form-field appearance="outline">
+                  <mat-label>Modèle business</mat-label>
+                  <mat-select formControlName="businessModelId">
+                    <mat-option
+                      *ngFor="let item of businessModels"
+                      [value]="item.id"
+                    >
+                      {{ item.libelle || item.code }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="hasError('businessModelId')">
+                    Le modèle business est obligatoire.
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Type d’engagement</mat-label>
+                  <mat-select formControlName="typeEngagementId">
+                    <mat-option
+                      *ngFor="let item of typesEngagement"
+                      [value]="item.id"
+                    >
+                      {{ item.libelle || item.code }}
+                    </mat-option>
+                  </mat-select>
+                  <mat-error *ngIf="hasError('typeEngagementId')">
+                    Le type d’engagement est obligatoire.
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="field-box">
+                <label>Statut contractuel et financier initial</label>
+                <div class="readonly-value">—</div>
+              </div>
+
+              <mat-form-field appearance="outline" class="full-field">
+                <mat-label>Statut projet</mat-label>
+                <mat-select formControlName="statutProjetId">
+                  <mat-option
+                    *ngFor="let statut of statutsProjet"
+                    [value]="statut.id"
+                  >
+                    {{ statut.libelle || statut.code }}
+                  </mat-option>
+                </mat-select>
+                <mat-error *ngIf="hasError('statutProjetId')">
+                  Le statut projet est obligatoire.
+                </mat-error>
+              </mat-form-field>
+
+              <div class="fields-grid two">
+                <div class="field-box">
+                  <label>Devise projet</label>
+                  <div class="readonly-value">
+                    {{ selectedDeviseCode || "—" }}
+                  </div>
+                </div>
+
+                <div class="field-box">
+                  <label>Taux de change vers TND</label>
+                  <div class="readonly-value">
+                    {{ number(tauxChange) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Planning -->
+          <section class="fiche-card accent-blue">
+            <div class="card-header">
+              <span class="header-icon blue">
+                <mat-icon>calendar_month</mat-icon>
+              </span>
+              <h2>Planning</h2>
+            </div>
+
+            <div class="card-body compact">
+              <div class="fields-grid two">
+                <mat-form-field appearance="outline">
+                  <mat-label>Date de démarrage</mat-label>
+                  <input matInput type="date" formControlName="dateDemarrage" />
+                  <mat-error *ngIf="hasError('dateDemarrage')">
+                    La date de démarrage est obligatoire.
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Date démarrage effective</mat-label>
+                  <input
+                    matInput
+                    type="date"
+                    formControlName="dateDemarrageEffective"
+                  />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Date de fin initiale prévue</mat-label>
+                  <input
+                    matInput
+                    type="date"
+                    formControlName="dateFinInitialePrevue"
+                  />
+                  <mat-error *ngIf="hasError('dateFinInitialePrevue')">
+                    La date de fin initiale prévue est obligatoire.
+                  </mat-error>
+                </mat-form-field>
+
+                <div class="field-box">
+                  <label>Durée du contrat</label>
+                  <div class="readonly-value calculated">
+                    {{ dureeContratJoursPreview }} jours
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Avenants -->
+          <section class="fiche-card accent-green">
+            <div class="card-header">
+              <span class="header-icon green">
+                <mat-icon>price_change</mat-icon>
+              </span>
+              <h2>Avenants & budget révisé</h2>
+            </div>
+
+            <div class="card-body compact">
+              <div class="field-box">
+                <label>Avenant</label>
+                <div class="readonly-value toggle-value">
+                  <mat-slide-toggle formControlName="avenant">
+                    Ce projet contient un avenant
+                  </mat-slide-toggle>
+                </div>
+              </div>
+
+              <div class="fields-grid two">
+                <div class="money-box small">
+                  <label>Montant avenant</label>
+
+                  <mat-form-field appearance="outline" class="money-field">
+                    <input
+                      matInput
+                      type="number"
+                      formControlName="montantAvenant"
+                    />
+                  </mat-form-field>
+                </div>
+
+                <div class="money-box small">
+                  <label>Total avenants</label>
+                  <div class="money-main">
+                    {{ money(montantAvenant) }}
+                  </div>
+                </div>
+
+                <div class="money-box total small">
+                  <label>Budget total avenants inclus</label>
+                  <div class="money-main">
+                    {{ money(budgetTotalPreview) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Full width profitability -->
+        <section class="fiche-card accent-red profitability-card">
+          <div class="card-header">
+            <span class="header-icon red">
+              <mat-icon>trending_up</mat-icon>
+            </span>
+            <h2>Coûts & rentabilité</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="di-alert">
+              <mat-icon>info</mat-icon>
+              <div>
+                <strong>Aperçu calculé côté interface</strong>
+                <p>
+                  Ces valeurs sont prévisualisées à partir des champs saisis.
+                  Les valeurs officielles seront recalculées par le backend
+                  après l’enregistrement.
+                </p>
+              </div>
+            </div>
+
+            <div class="fields-grid six">
+              <mat-form-field appearance="outline">
+                <mat-label>PPR en TND</mat-label>
+                <input matInput type="number" formControlName="pprTnd" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>PPP en TND</mat-label>
+                <input matInput type="number" formControlName="pppTnd" />
+              </mat-form-field>
+
+              <div class="field-box">
+                <label>Budget initial en TND</label>
+                <div class="readonly-value calculated">
+                  {{ tnd(budgetInitialToTndPreview) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Budget total en TND</label>
+                <div class="readonly-value calculated">
+                  {{ tnd(budgetTotalTndPreview) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Workload vendu avenants inclus</label>
+                <div class="readonly-value calculated">
+                  {{ jh(workloadVenduAvenantsInclusPreview) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Rentabilité DI</label>
+                <div class="readonly-value">Après configuration du DI</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="fiche-footer">
+        © 2024 ST2I Enterprise — Système de gestion de projets intégré
+      </div>
+
+      <div class="edit-footer-actions">
+        <button class="btn btn-secondary" type="button" (click)="cancel()">
+          Annuler
+        </button>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="saving"
+          (click)="save()"
+        >
+          <mat-icon>save</mat-icon>
+          {{ saving ? "Enregistrement..." : "Enregistrer les modifications" }}
+        </button>
+      </div>
+    </form>
+  </ng-container>
+</div>

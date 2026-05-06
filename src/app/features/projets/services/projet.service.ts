@@ -25,7 +25,22 @@ export class ProjetService {
     return this.http.get<ProjetResponse>(`${this.baseUrl}/${id}`);
   }
 
+  getAllProjets(): Observable<ProjetResponse[]> {
+    return this.http.get<ProjetResponse[]>(this.baseUrl);
+  }
+
   getProjetDetails(id: number): Observable<ProjetDetailResponse> {
     return this.http.get<ProjetDetailResponse>(`${this.baseUrl}/${id}/details`);
+  }
+
+  deleteProjet(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  updateProjet(
+    id: number,
+    payload: ProjetCreateRequest,
+  ): Observable<ProjetResponse> {
+    return this.http.put<ProjetResponse>(`${this.baseUrl}/${id}`, payload);
   }
 }

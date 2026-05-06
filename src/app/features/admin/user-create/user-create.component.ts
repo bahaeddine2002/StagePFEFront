@@ -41,12 +41,12 @@ export class UserCreateComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.required],
     }),
-    active: new FormControl(false, {
-      nonNullable: true,
-    }),
     profileCode: new FormControl<string[]>([], {
       nonNullable: true,
       validators: [Validators.required],
+    }),
+    sendEmail: new FormControl(true, {
+      nonNullable: true,
     }),
   });
 
@@ -117,6 +117,7 @@ export class UserCreateComponent implements OnInit {
       email: formValue.email,
       password: formValue.password,
       profileCode: formValue.profileCode,
+      sendEmail: formValue.sendEmail,
     };
 
     this.usersService
@@ -124,7 +125,11 @@ export class UserCreateComponent implements OnInit {
       .pipe(finalize(() => (this.isSubmitting = false)))
       .subscribe({
         next: () => {
-          this.toastService.success("Utilisateur créé avec succès.");
+          const message = payload.sendEmail
+            ? "Utilisateur créé avec succès. Les identifiants ont été envoyés par email."
+            : "Utilisateur créé avec succès.";
+
+          this.toastService.success(message);
 
           this.userForm.reset({
             matricule: "",
@@ -132,8 +137,8 @@ export class UserCreateComponent implements OnInit {
             lastName: "",
             email: "",
             password: "",
-            active: false,
             profileCode: [],
+            sendEmail: true,
           });
 
           this.submitAttempted = false;

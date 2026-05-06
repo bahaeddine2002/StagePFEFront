@@ -1,15 +1,9 @@
 import { Component, OnInit, inject } from "@angular/core";
 import { Router } from "@angular/router";
+import { finalize } from "rxjs";
 
-type StaticProjet = {
-  id: number;
-  codeProjet: string;
-  nomProjet: string;
-  client: string;
-  partenaire: string;
-  statut: "En cours" | "Planifié" | "Clôturé";
-};
-
+import { ProjetService } from "../services/projet.service";
+import { ProjetResponse } from "../models/Projets";
 @Component({
   selector: "app-projets-list",
   templateUrl: "./projets-list.component.html",
@@ -17,63 +11,57 @@ type StaticProjet = {
 })
 export class ProjetsListComponent implements OnInit {
   private router = inject(Router);
+  private projetService = inject(ProjetService);
 
   totalProjets = 0;
   projetsActifs = 0;
   projetsClotures = 0;
 
-  projets: StaticProjet[] = [];
-  filteredProjets: StaticProjet[] = [];
+  projets: ProjetResponse[] = [];
+  filteredProjets: ProjetResponse[] = [];
 
   isLoading = false;
   errorMessage = "";
   searchTerm = "";
 
   ngOnInit(): void {
-    this.loadStaticProjects();
+    this.loadProjects();
   }
 
-  loadStaticProjects(): void {
+  loadProjects(): void {
     this.isLoading = true;
     this.errorMessage = "";
 
-    this.projets = [
-      {
-        id: 1,
-        codeProjet: "PRJ-2026-001",
-        nomProjet: "Plateforme de Suivi Budgétaire",
-        client: "Banque Zitouna",
-        partenaire: "ST2i",
-        statut: "En cours",
-      },
-      {
-        id: 2,
-        codeProjet: "PRJ-2026-002",
-        nomProjet: "Portail RH Interne",
-        client: "ST2i Groupe",
-        partenaire: "ST2i",
-        statut: "Planifié",
-      },
-      {
-        id: 3,
-        codeProjet: "PRJ-2025-014",
-        nomProjet: "Archivage Intelligent",
-        client: "Ministère",
-        partenaire: "ST2i",
-        statut: "Clôturé",
-      },
-    ];
+    this.projetService
+      .getAllProjets()
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: (projets) => {
+          this.projets = projets || [];
+          this.filteredProjets = this.projets;
+          this.calculateStats();
+        },
+        error: (error) => {
+          console.error("Erreur lors du chargement des projets", error);
+          this.errorMessage =
+            "Impossible de charger la liste des projets. Veuillez réessayer.";
+          this.projets = [];
+          this.filteredProjets = [];
+          this.calculateStats();
+        },
+      });
+  }
 
-    this.filteredProjets = this.projets;
+  private calculateStats(): void {
     this.totalProjets = this.projets.length;
-    this.projetsActifs = this.projets.filter(
-      (p) => p.statut === "En cours" || p.statut === "Planifié",
-    ).length;
-    this.projetsClotures = this.projets.filter(
-      (p) => p.statut === "Clôturé",
+
+    this.projetsActifs = this.projets.filter((p) =>
+      this.isActiveProject(p),
     ).length;
 
-    this.isLoading = false;
+    this.projetsClotures = this.projets.filter((p) =>
+      this.isClosedProject(p),
+    ).length;
   }
 
   setUrl(): void {
@@ -89,22 +77,27 @@ export class ProjetsListComponent implements OnInit {
     }
 
     this.filteredProjets = this.projets.filter((projet) => {
-      return (
-        projet.codeProjet.toLowerCase().includes(this.searchTerm) ||
-        projet.nomProjet.toLowerCase().includes(this.searchTerm) ||
-        projet.client.toLowerCase().includes(this.searchTerm) ||
-        projet.partenaire.toLowerCase().includes(this.searchTerm) ||
-        projet.statut.toLowerCase().includes(this.searchTerm)
-      );
+      const searchableText = [
+        projet.codeProjet,
+        projet.nomProjet,
+        projet.client,
+        projet.partenaire,
+        this.getStatutLabel(projet),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(this.searchTerm);
     });
   }
 
-  trackByProjetId(index: number, projet: StaticProjet): number {
+  trackByProjetId(index: number, projet: ProjetResponse): number {
     return projet.id;
   }
 
-  getProjetInitials(projet: StaticProjet): string {
-    return projet.nomProjet
+  getProjetInitials(projet: ProjetResponse): string {
+    return (projet.nomProjet || "Projet")
       .split(" ")
       .slice(0, 2)
       .map((word) => word.charAt(0))
@@ -112,15 +105,63 @@ export class ProjetsListComponent implements OnInit {
       .toUpperCase();
   }
 
-  onView(projet: StaticProjet): void {
+  getStatutLabel(projet: ProjetResponse): string {
+    return `Statut #${projet.statutProjetId}`;
+  }
+
+  isActiveProject(projet: ProjetResponse): boolean {
+    const statut = this.getStatutLabel(projet).toLowerCase();
+
+    return (
+      statut.includes("cours") ||
+      statut.includes("planifié") ||
+      statut.includes("planifie") ||
+      statut.includes("actif")
+    );
+  }
+
+  isClosedProject(projet: ProjetResponse): boolean {
+    const statut = this.getStatutLabel(projet).toLowerCase();
+
+    return (
+      statut.includes("clôturé") ||
+      statut.includes("cloture") ||
+      statut.includes("terminé") ||
+      statut.includes("termine")
+    );
+  }
+
+  onView(projet: ProjetResponse): void {
     this.router.navigate(["/projets", projet.id, "vue-ensemble"]);
   }
 
-  onEdit(projet: StaticProjet): void {
-    console.log("Edit projet", projet);
+  onOpenDevisInterne(projet: ProjetResponse): void {
+    this.router.navigate(["/projets", projet.id, "devis-interne"]);
   }
 
-  onDelete(projet: StaticProjet): void {
-    console.log("Delete projet", projet);
+  onEdit(projet: ProjetResponse): void {
+    this.router.navigate(["/projets", projet.id, "edit"]);
+  }
+
+  onDelete(projet: ProjetResponse): void {
+    const confirmed = window.confirm(
+      `Voulez-vous vraiment supprimer le projet ${projet.codeProjet} ?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+    this.projetService.deleteProjet(projet.id).subscribe({
+      next: () => {
+        this.projets = this.projets.filter((p) => p.id !== projet.id);
+        this.applySearch(this.searchTerm);
+        this.calculateStats();
+      },
+      error: (error) => {
+        console.error("Erreur lors de la suppression du projet", error);
+        this.errorMessage =
+          "Impossible de supprimer ce projet. Veuillez réessayer.";
+      },
+    });
   }
 }

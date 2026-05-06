@@ -1,0 +1,250 @@
+<p>honoraire-line-details-drawer works!</p>
+<div class="drawer-overlay" (click)="close()"></div>
+
+<aside class="di-drawer">
+  <header class="drawer-header">
+    <div>
+      <div class="drawer-title-row">
+        <h2>Détails de la ligne honoraire</h2>
+
+        <span
+          class="drawer-status"
+          [class.negative]="isNegative(line.margeNetteMontant)"
+        >
+          {{
+            isNegative(line.margeNetteMontant)
+              ? "Marge négative"
+              : "Marge positive"
+          }}
+        </span>
+      </div>
+
+      <p>
+        {{ line.designation }} —
+        {{ line.resourceRetenuNomComplet || "Ressource non résolue" }}
+      </p>
+    </div>
+
+    <button
+      mat-icon-button
+      class="drawer-close"
+      type="button"
+      (click)="close()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div class="drawer-body">
+    <section class="drawer-warning" *ngIf="isNegative(line.margeNetteMontant)">
+      <mat-icon>warning_amber</mat-icon>
+      <span>
+        Cette ligne présente une marge négative. Vérifiez la quantité interne,
+        le coût unitaire ou le prix vendu au client.
+      </span>
+    </section>
+
+    <!-- 01 Vendu client -->
+    <article class="drawer-card">
+      <div class="drawer-card-title blue-title">
+        <span>01</span>
+        <h3>Vendu client</h3>
+      </div>
+
+      <div class="drawer-grid">
+        <div class="drawer-field">
+          <span>Désignation</span>
+          <strong>{{ line.designation }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Unité</span>
+          <strong>{{ line.unite || "H/J" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Charge estimée</span>
+          <strong
+            >{{ line.chargeEstimee || 0 }} {{ line.unite || "H/J" }}</strong
+          >
+        </div>
+
+        <div class="drawer-field">
+          <span>Prix unitaire vendu</span>
+          <strong>{{ formatMoney(line.prixUnitaire) }} {{ deviseCode }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Montant vendu devise</span>
+          <strong>{{ formatMoney(line.montantTotal) }} {{ deviseCode }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Montant vendu TND</span>
+          <strong>{{ formatMoney(line.montantTotalTnd) }} TND</strong>
+        </div>
+      </div>
+
+      <div class="drawer-total-line">
+        <span>Montant total vendu en TND</span>
+        <strong>{{ formatMoney(line.montantTotalTnd) }} TND</strong>
+      </div>
+    </article>
+
+    <!-- 02 Ressource & TCC -->
+    <article class="drawer-card">
+      <div class="drawer-card-title slate-title">
+        <span>02</span>
+        <h3>Ressource & TCC utilisé</h3>
+      </div>
+
+      <div class="drawer-grid">
+        <div class="drawer-field">
+          <span>Ressource proposée</span>
+          <strong>
+            {{ line.resourceProposeId ? "#" + line.resourceProposeId : "—" }}
+          </strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Ressource retenue</span>
+          <strong>
+            {{ line.resourceRetenuNomComplet || "#" + line.resourceRetenuId }}
+          </strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Année TCC utilisée</span>
+          <strong>{{ line.anneeTccUtilisee }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>TCC ressource ID</span>
+          <strong>{{ line.tccRessourceId || "—" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>TCC base utilisé</span>
+          <strong>{{ formatMoney(line.tccBaseUtilise) }} TND</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Coef FG utilisé</span>
+          <strong>{{ line.coefFgUtilise }}</strong>
+        </div>
+      </div>
+
+      <div class="drawer-total-line">
+        <span>Coût unitaire interne utilisé</span>
+        <strong>{{ formatMoney(line.coutUnitaireInterneUtilise) }} TND</strong>
+      </div>
+    </article>
+
+    <!-- 03 Réalisation interne -->
+    <article class="drawer-card">
+      <div class="drawer-card-title slate-title">
+        <span>03</span>
+        <h3>Réalisation interne</h3>
+      </div>
+
+      <div class="drawer-grid">
+        <div class="drawer-field">
+          <span>Quantité interne</span>
+          <strong>{{ line.quantite || 0 }} {{ line.unite || "H/J" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Coût unitaire interne</span>
+          <strong
+            >{{ formatMoney(line.coutUnitaireInterneUtilise) }} TND</strong
+          >
+        </div>
+      </div>
+
+      <div class="drawer-total-line">
+        <span>Prix de revient</span>
+        <strong>{{ formatMoney(line.prixRevient) }} TND</strong>
+      </div>
+    </article>
+
+    <!-- 04 Frais & coûts -->
+    <article class="drawer-card">
+      <div class="drawer-card-title red-title">
+        <span>04</span>
+        <h3>Frais & coûts</h3>
+      </div>
+
+      <div class="drawer-grid">
+        <div class="drawer-field">
+          <span>Frais directs</span>
+          <strong>{{ formatMoney(line.fd) }} TND</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>FG / P&ST</span>
+          <strong>{{ formatMoney(line.fgPst) }} TND</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Coût hors taxes</span>
+          <strong>{{ formatMoney(line.coutHorsTaxes) }} TND</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Coût des impôts</span>
+          <strong>{{ formatMoney(line.coutDesImpots) }} TND</strong>
+        </div>
+      </div>
+
+      <div class="drawer-total-line">
+        <span>Coût final</span>
+        <strong>{{ formatMoney(line.coutFinal) }} TND</strong>
+      </div>
+    </article>
+
+    <!-- 05 Résultat financier -->
+    <article class="drawer-card">
+      <div
+        class="drawer-card-title"
+        [class.green-title]="!isNegative(line.margeNetteMontant)"
+        [class.red-title]="isNegative(line.margeNetteMontant)"
+      >
+        <span>05</span>
+        <h3>Résultat financier</h3>
+      </div>
+
+      <div
+        class="drawer-result-box"
+        [class.negative]="isNegative(line.margeNetteMontant)"
+      >
+        <span>Marge nette</span>
+        <strong>
+          {{ formatMoney(line.montantTotalTnd) }} -
+          {{ formatMoney(line.coutFinal) }}
+          =
+          {{ line.margeNetteMontant > 0 ? "+" : "" }}
+          {{ formatMoney(line.margeNetteMontant) }} TND
+        </strong>
+      </div>
+
+      <div
+        class="drawer-result-box"
+        [class.negative]="isNegative(line.margeNetteMontant)"
+      >
+        <span>Marge nette %</span>
+        <strong>{{ formatPercent(line.margeNettePourcentage) }}%</strong>
+      </div>
+    </article>
+  </div>
+
+  <footer class="drawer-footer">
+    <button
+      mat-stroked-button
+      class="btn-secondary"
+      type="button"
+      (click)="close()"
+    >
+      Fermer
+    </button>
+  </footer>
+</aside>

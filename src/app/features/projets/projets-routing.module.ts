@@ -8,7 +8,8 @@ import { AuthGuard } from "src/app/core/guards/auth.guard";
 import { ProjectCreateComponent } from "./project-create/project-create.component";
 import { FicheIdentificationComponent } from "./fiche-identification/fiche-identification.component";
 import { DevisInterneComponent } from "./devis-interne/devis-interne_list/devis-interne.component";
-
+import { ProjetEditComponent } from "./projet-edit/projet-edit.component";
+import { CoutPrevisionnelComponent } from "./cout-previsionnel/cout-previsionnel.component";
 const routes: Routes = [
   {
     path: "",
@@ -24,6 +25,10 @@ const routes: Routes = [
         path: "",
         component: ProjetsListComponent,
         pathMatch: "full",
+      },
+      {
+        path: ":id/edit",
+        component: ProjetEditComponent,
       },
 
       {
@@ -44,7 +49,7 @@ const routes: Routes = [
       },
       {
         path: ":id/cout-previsionnel",
-        component: ProjetPagePlaceholderComponent,
+        component: CoutPrevisionnelComponent,
       },
       {
         path: ":id/di",

@@ -5,6 +5,7 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   profileCode: string[];
+  sendEmail: boolean;
 }
 
 export interface UserResponse {

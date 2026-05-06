@@ -1,0 +1,329 @@
+<div class="drawer-overlay" (click)="close()"></div>
+
+<aside class="di-drawer">
+  <header class="drawer-header">
+    <div>
+      <div class="drawer-title-row">
+        <h2>Ajouter une ligne honoraire</h2>
+
+        <span
+          class="drawer-status"
+          [class.negative]="resolvedTcc && !resolvedTcc.found"
+        >
+          {{ tccFound ? "TCC trouvé" : "TCC requis" }}
+        </span>
+      </div>
+
+      <p>
+        Définissez la ressource, le TCC utilisé et les paramètres financiers de
+        la ligne.
+      </p>
+    </div>
+
+    <button
+      mat-icon-button
+      class="drawer-close"
+      type="button"
+      (click)="close()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="drawer-body">
+      <section class="drawer-warning" *ngIf="resolvedTcc && !resolvedTcc.found">
+        <mat-icon>warning_amber</mat-icon>
+        <span>
+          {{ tccResolveMessage }}
+          Créez le TCC dans l’administration ou choisissez une autre année.
+        </span>
+      </section>
+
+      <!-- 01 Ressources -->
+      <article class="drawer-card">
+        <div class="drawer-card-title blue-title">
+          <span>01</span>
+          <h3>Désignation & ressources</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Désignation</mat-label>
+            <input
+              matInput
+              formControlName="designation"
+              placeholder="Ex: Développement backend"
+            />
+            <mat-error *ngIf="form.get('designation')?.hasError('required')">
+              La désignation est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Année TCC</mat-label>
+            <input matInput type="number" formControlName="anneeTccUtilisee" />
+            <mat-error
+              *ngIf="form.get('anneeTccUtilisee')?.hasError('required')"
+            >
+              L’année TCC est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Ressource proposée</mat-label>
+
+            <mat-select formControlName="resourceProposeId">
+              <mat-option [value]="null">Aucune</mat-option>
+
+              <mat-option *ngIf="isLoadingUsers" disabled>
+                Chargement des utilisateurs...
+              </mat-option>
+
+              <mat-option *ngFor="let user of users" [value]="user.id">
+                <div class="user-option">
+                  <strong>{{ getUserFullName(user) }}</strong>
+                  <span>{{ getUserMeta(user) }}</span>
+                </div>
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Ressource retenue</mat-label>
+
+            <mat-select formControlName="resourceRetenuId">
+              <mat-option *ngIf="isLoadingUsers" disabled>
+                Chargement des utilisateurs...
+              </mat-option>
+
+              <mat-option
+                *ngIf="!isLoadingUsers && users.length === 0"
+                disabled
+              >
+                Aucun utilisateur trouvé
+              </mat-option>
+
+              <mat-option *ngFor="let user of users" [value]="user.id">
+                <div class="user-option">
+                  <strong>{{ getUserFullName(user) }}</strong>
+                  <span>{{ getUserMeta(user) }}</span>
+                </div>
+              </mat-option>
+            </mat-select>
+
+            <mat-error
+              *ngIf="form.get('resourceRetenuId')?.hasError('required')"
+            >
+              La ressource retenue est obligatoire.
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </article>
+
+      <!-- 02 TCC -->
+      <article class="drawer-card">
+        <div
+          class="drawer-card-title"
+          [class.green-title]="tccFound"
+          [class.red-title]="resolvedTcc && !resolvedTcc.found"
+          [class.slate-title]="!resolvedTcc"
+        >
+          <span>02</span>
+          <h3>TCC utilisé</h3>
+        </div>
+
+        <div class="tcc-loading" *ngIf="isResolvingTcc">
+          <mat-spinner diameter="26"></mat-spinner>
+          <span>Vérification du TCC...</span>
+        </div>
+
+        <div class="tcc-empty" *ngIf="!isResolvingTcc && !resolvedTcc">
+          <mat-icon>info</mat-icon>
+          <span>{{ tccResolveMessage }}</span>
+        </div>
+
+        <div class="drawer-grid" *ngIf="!isResolvingTcc && tccFound">
+          <div class="drawer-field">
+            <span>Ressource</span>
+            <strong>
+              {{ resolvedTcc?.employeNomComplet || getSelectedRetenuName() }}
+            </strong>
+          </div>
+
+          <div class="drawer-field">
+            <span>Année</span>
+            <strong>{{ resolvedTcc?.annee }}</strong>
+          </div>
+
+          <div class="drawer-field">
+            <span>TCC base</span>
+            <strong>{{ formatMoney(resolvedTcc?.tccBase) }} TND</strong>
+          </div>
+
+          <div class="drawer-field">
+            <span>Coef FG</span>
+            <strong>{{ resolvedTcc?.coefFg }}</strong>
+          </div>
+        </div>
+
+        <div class="drawer-total-line" *ngIf="tccFound">
+          <span>Coût unitaire interne utilisé</span>
+          <strong>
+            {{ formatMoney(resolvedTcc?.coutUnitaireInterne) }} TND
+          </strong>
+        </div>
+      </article>
+
+      <!-- 03 Vendu client -->
+      <article class="drawer-card">
+        <div class="drawer-card-title blue-title">
+          <span>03</span>
+          <h3>Vendu client</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Charge estimée</mat-label>
+            <input matInput type="number" formControlName="chargeEstimee" />
+            <mat-error *ngIf="form.get('chargeEstimee')?.invalid">
+              La charge estimée doit être supérieure à 0.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Prix unitaire vendu</mat-label>
+            <input matInput type="number" formControlName="prixUnitaire" />
+            <mat-error *ngIf="form.get('prixUnitaire')?.invalid">
+              Le prix unitaire doit être supérieur à 0.
+            </mat-error>
+          </mat-form-field>
+
+          <div class="drawer-field">
+            <span>Unité</span>
+            <strong>H/J</strong>
+          </div>
+
+          <div class="drawer-field">
+            <span>Devise projet</span>
+            <strong>{{ devisInterne.deviseCode || "TND" }}</strong>
+          </div>
+
+          <div class="drawer-field">
+            <span>Taux change vers TND</span>
+            <strong>{{ devisInterne.tauxChangeVersTnd }}</strong>
+          </div>
+        </div>
+
+        <div class="drawer-total-line">
+          <span>Montant vendu TND</span>
+          <strong>{{ formatMoney(montantVenduTnd) }} TND</strong>
+        </div>
+      </article>
+
+      <!-- 04 Réalisation interne -->
+      <article class="drawer-card">
+        <div class="drawer-card-title slate-title">
+          <span>04</span>
+          <h3>Réalisation interne</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Quantité interne</mat-label>
+            <input matInput type="number" formControlName="quantite" />
+            <mat-error *ngIf="form.get('quantite')?.invalid">
+              La quantité doit être supérieure à 0.
+            </mat-error>
+          </mat-form-field>
+
+          <div class="drawer-field">
+            <span>Coût unitaire interne</span>
+            <strong>
+              {{ formatMoney(resolvedTcc?.coutUnitaireInterne) }} TND
+            </strong>
+          </div>
+        </div>
+
+        <div class="drawer-total-line">
+          <span>Prix de revient</span>
+          <strong>{{ formatMoney(prixRevient) }} TND</strong>
+        </div>
+      </article>
+
+      <!-- 05 Frais & résultat -->
+      <article class="drawer-card">
+        <div
+          class="drawer-card-title"
+          [class.green-title]="!isPreviewNegative"
+          [class.red-title]="isPreviewNegative"
+        >
+          <span>05</span>
+          <h3>Frais & aperçu marge</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Frais directs</mat-label>
+            <input matInput type="number" formControlName="fd" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>FG / P&ST</mat-label>
+            <input matInput type="number" formControlName="fgPst" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Coût des impôts</mat-label>
+            <input matInput type="number" formControlName="coutDesImpots" />
+          </mat-form-field>
+        </div>
+
+        <div class="drawer-total-line">
+          <span>Coût hors taxes</span>
+          <strong>{{ formatMoney(coutHorsTaxes) }} TND</strong>
+        </div>
+
+        <div class="drawer-total-line">
+          <span>Coût final</span>
+          <strong>{{ formatMoney(coutFinal) }} TND</strong>
+        </div>
+
+        <div class="drawer-result-box" [class.negative]="isPreviewNegative">
+          <span>Marge nette prévisionnelle</span>
+          <strong>
+            {{ formatMoney(montantVenduTnd) }} - {{ formatMoney(coutFinal) }} =
+            {{ margeNetteMontant > 0 ? "+" : "" }}
+            {{ formatMoney(margeNetteMontant) }} TND
+          </strong>
+        </div>
+
+        <div class="drawer-result-box" [class.negative]="isPreviewNegative">
+          <span>Marge nette %</span>
+          <strong>{{ formatPercent(margeNettePourcentage) }}%</strong>
+        </div>
+      </article>
+    </div>
+
+    <footer class="drawer-footer">
+      <button
+        mat-stroked-button
+        class="btn-secondary"
+        type="button"
+        (click)="close()"
+      >
+        Annuler
+      </button>
+
+      <button
+        mat-flat-button
+        class="btn-primary"
+        type="submit"
+        [disabled]="!canSave"
+      >
+        <mat-icon>save</mat-icon>
+        {{ isSaving ? "Enregistrement..." : "Enregistrer la ligne" }}
+      </button>
+    </footer>
+  </form>
+</aside>

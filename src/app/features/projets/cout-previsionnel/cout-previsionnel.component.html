@@ -1,0 +1,456 @@
+<div class="page-container">
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <span>Projets</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span>{{ projectName }}</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Coût prévisionnel</span>
+  </nav>
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="page-header-text">
+      <h1 class="page-title">Coût prévisionnel</h1>
+      <p class="page-subtitle">
+        Planifiez les charges mensuelles des ressources et suivez les coûts
+        prévisionnels du projet.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button mat-stroked-button class="btn-secondary" (click)="exportExcel()">
+        <mat-icon>download</mat-icon>
+        Exporter Excel
+      </button>
+
+      <button mat-flat-button class="btn-primary" (click)="save()">
+        <mat-icon>save</mat-icon>
+        Enregistrer
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <section class="stats-grid cout-stats-grid">
+    <article class="stat-card accent-line">
+      <div class="stat-content">
+        <p class="stat-label">Ressources planifiées</p>
+        <h2 class="stat-value">{{ totalResourcesPlanifiees }}</h2>
+        <div class="stat-footer muted">
+          <span>Ressources issues de la DI</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>groups</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card accent-line neutral-accent">
+      <div class="stat-content">
+        <p class="stat-label">Période projet</p>
+        <h2 class="stat-value stat-value-text">2025 - 2026</h2>
+        <div class="stat-footer muted">
+          <span>{{ projectPeriod }}</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>date_range</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card accent-line">
+      <div class="stat-content">
+        <p class="stat-label">Total jours prévus</p>
+        <h2 class="stat-value">{{ formatNumber(totalJoursPrevus) }} j</h2>
+        <div class="stat-footer muted">
+          <span>Toutes ressources confondues</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>event_available</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card success-accent">
+      <div class="stat-content">
+        <p class="stat-label">Coût prévisionnel</p>
+        <h2 class="stat-value stat-value-money">
+          {{ formatMoney(totalCoutPrevisionnel) }} TND
+        </h2>
+        <div class="stat-footer positive">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ formatNumber(budgetConsommePercent) }}% du budget</span>
+        </div>
+      </div>
+
+      <div class="stat-visual">
+        <mat-icon>paid</mat-icon>
+      </div>
+    </article>
+  </section>
+
+  <!-- Tabs -->
+  <section class="tcc-tabs-card">
+    <button
+      type="button"
+      class="tcc-tab"
+      [class.active]="activeTab === 'PLAN_CHARGE'"
+      (click)="setActiveTab('PLAN_CHARGE')"
+    >
+      <mat-icon>table_chart</mat-icon>
+      Plan de charge
+    </button>
+
+    <button
+      type="button"
+      class="tcc-tab"
+      [class.active]="activeTab === 'COUTS_CALCULES'"
+      (click)="setActiveTab('COUTS_CALCULES')"
+    >
+      <mat-icon>calculate</mat-icon>
+      Coûts calculés
+    </button>
+  </section>
+
+  <!-- Toolbar -->
+  <section class="toolbar-card">
+    <div class="toolbar-left">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Année</mat-label>
+        <mat-select
+          [value]="selectedYear"
+          (selectionChange)="onYearChange($event.value)"
+        >
+          <mat-option [value]="2025">2025</mat-option>
+          <mat-option [value]="2026">2026</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field resource-field">
+        <mat-label>Ressource</mat-label>
+        <mat-select
+          [value]="selectedResource"
+          (selectionChange)="onResourceChange($event.value)"
+        >
+          <mat-option value="ALL">Toutes les ressources</mat-option>
+          <mat-option
+            *ngFor="let resource of resources; trackBy: trackByResourceId"
+            [value]="resource.id.toString()"
+          >
+            {{ resource.nomComplet }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="toolbar-right">
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher une ressource</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          type="text"
+          [value]="searchTerm"
+          (input)="onSearchChange($any($event.target).value)"
+          placeholder="Nom, matricule..."
+        />
+      </mat-form-field>
+
+      <button mat-button class="btn-reset" (click)="resetFilters()">
+        Réinitialiser
+      </button>
+
+      <button mat-flat-button class="btn-primary" (click)="recalculate()">
+        <mat-icon>refresh</mat-icon>
+        Recalculer
+      </button>
+    </div>
+  </section>
+
+  <!-- Plan de charge -->
+  <section class="table-card" *ngIf="activeTab === 'PLAN_CHARGE'">
+    <div class="table-card-header">
+      <div>
+        <h2>Plan de charge mensuel</h2>
+        <p>
+          Saisissez les jours prévus par ressource et par mois. Les cellules
+          vides indiquent une absence de planification.
+        </p>
+      </div>
+
+      <span class="readonly-badge editable-badge">
+        <mat-icon>edit</mat-icon>
+        Saisie active
+      </span>
+    </div>
+
+    <div class="table-wrapper planning-table-wrapper">
+      <table class="roles-table planning-table">
+        <thead>
+          <tr>
+            <th class="sticky-col resource-col">RESSOURCE</th>
+
+            <th
+              class="month-header"
+              *ngFor="let month of months; trackBy: trackByMonthKey"
+            >
+              {{ month.label }}
+            </th>
+
+            <th class="total-col">TOTAL JOURS</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngIf="filteredResources.length === 0">
+            <td [attr.colspan]="months.length + 2">
+              <div class="empty-state">
+                <mat-icon>search_off</mat-icon>
+                <p>Aucune ressource ne correspond aux filtres.</p>
+              </div>
+            </td>
+          </tr>
+
+          <tr
+            *ngFor="
+              let resource of filteredResources;
+              trackBy: trackByResourceId
+            "
+          >
+            <td class="sticky-col resource-col">
+              <div class="role-cell">
+                <div class="role-icon-box">
+                  <mat-icon>person</mat-icon>
+                </div>
+
+                <div class="role-text">
+                  <div class="role-name">{{ resource.nomComplet }}</div>
+                  <div class="role-module">{{ resource.matricule }}</div>
+                </div>
+              </div>
+            </td>
+
+            <td
+              class="month-cell editable-month-cell"
+              *ngFor="let month of months; trackBy: trackByMonthKey"
+            >
+              <input
+                class="inline-days-input"
+                type="number"
+                min="0"
+                step="0.5"
+                [value]="resource.jours[month.key] ?? ''"
+                placeholder="—"
+                (input)="updateDays(resource, month.key, $event)"
+              />
+            </td>
+
+            <td class="total-col">
+              <span class="total-chip">
+                {{ formatNumber(getResourceTotalDays(resource)) }} j
+              </span>
+            </td>
+          </tr>
+
+          <tr class="summary-row">
+            <td class="sticky-col resource-col">Total mensuel</td>
+
+            <td
+              class="month-cell summary-cell"
+              *ngFor="let month of months; trackBy: trackByMonthKey"
+            >
+              {{ formatNumber(getMonthTotalDays(month.key)) }}
+            </td>
+
+            <td class="total-col summary-cell">
+              {{ formatNumber(totalJoursPrevus) }} j
+            </td>
+          </tr>
+
+          <tr class="cumul-row">
+            <td class="sticky-col resource-col">Cumul jours restant</td>
+
+            <td
+              class="month-cell cumul-cell"
+              *ngFor="
+                let month of months;
+                let monthIndex = index;
+                trackBy: trackByMonthKey
+              "
+            >
+              {{ formatNumber(getCumulDaysRemaining(monthIndex)) }}
+            </td>
+
+            <td class="total-col cumul-cell">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <div class="table-results">
+        {{ filteredResources.length }} ressource(s) affichée(s)
+      </div>
+
+      <div class="scroll-hint">
+        <mat-icon>info</mat-icon>
+        Faites défiler horizontalement pour consulter tous les mois de l’année
+        {{ selectedYear }}.
+      </div>
+    </div>
+  </section>
+
+  <!-- Coûts calculés -->
+  <section class="table-card" *ngIf="activeTab === 'COUTS_CALCULES'">
+    <div class="info-banner">
+      <mat-icon>info</mat-icon>
+      <div>
+        <strong>Lecture seule</strong>
+        <span>
+          Ces coûts sont calculés automatiquement à partir du plan de charge et
+          du TJM de chaque ressource.
+        </span>
+      </div>
+    </div>
+
+    <div class="table-card-header">
+      <div>
+        <h2>Coûts prévisionnels calculés</h2>
+        <p>
+          Modifiez le plan de charge pour mettre à jour automatiquement les
+          montants prévisionnels.
+        </p>
+      </div>
+
+      <span class="readonly-badge">
+        <mat-icon>lock</mat-icon>
+        Lecture seule
+      </span>
+    </div>
+
+    <div class="table-wrapper planning-table-wrapper">
+      <table class="roles-table planning-table">
+        <thead>
+          <tr>
+            <th class="sticky-col resource-col">RESSOURCE</th>
+
+            <th
+              class="month-header"
+              *ngFor="let month of months; trackBy: trackByMonthKey"
+            >
+              {{ month.label }}
+            </th>
+
+            <th class="total-col">TOTAL COÛT</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngIf="filteredResources.length === 0">
+            <td [attr.colspan]="months.length + 2">
+              <div class="empty-state">
+                <mat-icon>search_off</mat-icon>
+                <p>Aucune ressource ne correspond aux filtres.</p>
+              </div>
+            </td>
+          </tr>
+
+          <tr
+            *ngFor="
+              let resource of filteredResources;
+              trackBy: trackByResourceId
+            "
+          >
+            <td class="sticky-col resource-col">
+              <div class="role-cell">
+                <div class="role-icon-box">
+                  <mat-icon>person</mat-icon>
+                </div>
+
+                <div class="role-text">
+                  <div class="role-name">{{ resource.nomComplet }}</div>
+                  <div class="role-module">
+                    TJM : {{ formatMoney(resource.tjm) }} TND / H-Jour
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <td
+              class="month-cell cost-cell"
+              *ngFor="let month of months; trackBy: trackByMonthKey"
+            >
+              <ng-container
+                *ngIf="hasMonthValue(resource, month.key); else noCost"
+              >
+                <strong>
+                  {{ formatMoney(getMonthCost(resource, month.key)) }}
+                </strong>
+                <span>TND</span>
+              </ng-container>
+
+              <ng-template #noCost>
+                <span class="empty-value">—</span>
+              </ng-template>
+            </td>
+
+            <td class="total-col">
+              <div class="money-cell highlight">
+                <strong>
+                  {{ formatMoney(getResourceTotalCost(resource)) }} TND
+                </strong>
+              </div>
+            </td>
+          </tr>
+
+          <tr class="summary-row">
+            <td class="sticky-col resource-col">Total coût mensuel</td>
+
+            <td
+              class="month-cell summary-cell"
+              *ngFor="let month of months; trackBy: trackByMonthKey"
+            >
+              {{ formatMoney(getMonthTotalCost(month.key)) }}
+            </td>
+
+            <td class="total-col summary-cell">
+              {{ formatMoney(totalCoutPrevisionnel) }} TND
+            </td>
+          </tr>
+
+          <tr class="cumul-row">
+            <td class="sticky-col resource-col">Cumul coût restant</td>
+
+            <td
+              class="month-cell cumul-cell"
+              *ngFor="
+                let month of months;
+                let monthIndex = index;
+                trackBy: trackByMonthKey
+              "
+            >
+              {{ formatMoney(getCumulCostRemaining(monthIndex)) }}
+            </td>
+
+            <td class="total-col cumul-cell">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <div class="table-results">
+        {{ filteredResources.length }} ressource(s) affichée(s)
+      </div>
+
+      <div class="scroll-hint">
+        <mat-icon>info</mat-icon>
+        Les montants sont calculés avec la formule : jours prévus × TJM.
+      </div>
+    </div>
+  </section>
+</div>
