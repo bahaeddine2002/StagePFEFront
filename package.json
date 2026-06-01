@@ -27,8 +27,6 @@
     "axios": "^1.15.0",
     "jwt-decode": "^3.1.2",
     "ngx-logger": "^5.0.7",
-    "primeicons": "^6.0.1",
-    "primeng": "^14.2.3",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.11.4"

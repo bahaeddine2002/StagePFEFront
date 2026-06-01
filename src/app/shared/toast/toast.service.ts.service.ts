@@ -7,8 +7,9 @@ import { BehaviorSubject } from "rxjs";
 })
 export class ToastService {
   private toastsSubject = new BehaviorSubject<ToastItem | null>(null);
-  constructor() {}
   toasts$ = this.toastsSubject.asObservable();
+
+  private clearTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   show(
     type: ToastType,
@@ -23,9 +24,17 @@ export class ToastService {
     };
 
     this.toastsSubject.next(newToast);
+
+    if (this.clearTimeoutId) {
+      clearTimeout(this.clearTimeoutId);
+    }
+
+    this.clearTimeoutId = setTimeout(() => {
+      this.clear();
+    }, duration);
   }
 
-  success(message: string, title: string = "Succes"): void {
+  success(message: string, title: string = "Succès"): void {
     this.show("success", title, message, 4000);
   }
 
@@ -35,6 +44,10 @@ export class ToastService {
 
   clear(): void {
     this.toastsSubject.next(null);
-    console.log("value after cleared", this.toastsSubject.value);
+
+    if (this.clearTimeoutId) {
+      clearTimeout(this.clearTimeoutId);
+      this.clearTimeoutId = null;
+    }
   }
 }

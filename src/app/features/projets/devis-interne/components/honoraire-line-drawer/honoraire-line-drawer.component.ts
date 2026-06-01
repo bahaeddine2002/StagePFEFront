@@ -76,8 +76,8 @@ export class HonoraireLineDrawerComponent implements OnInit, OnDestroy {
         Validators.required,
       ],
 
-      chargeEstimee: [null, [Validators.required, Validators.min(0.001)]],
-      prixUnitaire: [null, [Validators.required, Validators.min(0.001)]],
+      chargeEstimee: [null],
+      prixUnitaire: [null],
 
       quantite: [null, [Validators.required, Validators.min(0.001)]],
 

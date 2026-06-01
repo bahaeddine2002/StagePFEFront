@@ -1,10 +1,5 @@
 import { Component, OnInit } from "@angular/core";
-import { AppDrawerService } from "src/app/shared/services/app-drawer.service";
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogRef,
-} from "@angular/material/dialog";
+import { MatDialog } from "@angular/material/dialog";
 import {
   DevisInterneResponse,
   LigneDevisInterneResponse,
@@ -13,6 +8,7 @@ import { ActivatedRoute, Router } from "@angular/router";
 import { DevisInterneService } from "../../services/devis-interne.service";
 import { finalize } from "rxjs";
 import { ConfirmCreateDiDialogComponent } from "../components/confirm-create-di-dialog/confirm-create-di-dialog.component";
+import { ToastService } from "src/app/shared/toast/toast.service.ts.service";
 
 @Component({
   selector: "app-devis-interne",
@@ -29,6 +25,7 @@ export class DevisInterneComponent implements OnInit {
 
   isLoading = false;
   isCreating = false;
+  isDeletingLineId: number | null = null;
   hasNoDi = false;
 
   searchTerm = "";
@@ -38,6 +35,7 @@ export class DevisInterneComponent implements OnInit {
     private router: Router,
     private dialog: MatDialog,
     private devisInterneService: DevisInterneService,
+    private toastService: ToastService,
   ) {}
 
   ngOnInit(): void {
@@ -58,13 +56,18 @@ export class DevisInterneComponent implements OnInit {
           this.hasNoDi = false;
         },
         error: (error) => {
-          if (error.status === 500) {
+          if (error.status === 404) {
             this.devisInterne = null;
             this.hasNoDi = true;
             return;
           }
 
-          console.error("Erreur lors du chargement du DI", error);
+          const message = this.extractErrorMessage(
+            error,
+            "Erreur lors du chargement du Devis Interne.",
+          );
+
+          this.toastService.error(message);
         },
       });
   }
@@ -96,9 +99,15 @@ export class DevisInterneComponent implements OnInit {
         next: (response) => {
           this.devisInterne = response;
           this.hasNoDi = false;
+          this.toastService.success("Devis Interne créé avec succès.");
         },
         error: (error) => {
-          console.error("Erreur lors de la création du DI", error);
+          const message = this.extractErrorMessage(
+            error,
+            "Erreur lors de la création du Devis Interne.",
+          );
+
+          this.toastService.error(message);
         },
       });
   }
@@ -128,6 +137,7 @@ export class DevisInterneComponent implements OnInit {
   onHonoraireSaved(updatedDi: DevisInterneResponse): void {
     this.devisInterne = updatedDi;
     this.isHonoraireDrawerOpen = false;
+    this.toastService.success("Ligne honoraire enregistrée avec succès.");
   }
 
   editLine(line: LigneDevisInterneResponse): void {
@@ -136,8 +146,39 @@ export class DevisInterneComponent implements OnInit {
   }
 
   deleteLine(line: LigneDevisInterneResponse): void {
-    // Later
-    console.log("Delete line", line);
+    if (this.isDeletingLineId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Voulez-vous vraiment supprimer la ligne "${line.designation}" ?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.isDeletingLineId = line.id;
+
+    this.devisInterneService
+      .deleteLigneHonoraire(this.devisInterne!.id, line.id)
+      .pipe(finalize(() => (this.isDeletingLineId = null)))
+      .subscribe({
+        next: (updatedDi) => {
+          this.devisInterne = updatedDi;
+          this.toastService.success(
+            "La ligne honoraire a été supprimée avec succès.",
+          );
+        },
+        error: (error) => {
+          const message = this.extractErrorMessage(
+            error,
+            "Erreur lors de la suppression de la ligne honoraire.",
+          );
+
+          this.toastService.error(message);
+        },
+      });
   }
 
   get lignes(): LigneDevisInterneResponse[] {
@@ -172,5 +213,11 @@ export class DevisInterneComponent implements OnInit {
 
   trackByLineId(index: number, line: LigneDevisInterneResponse): number {
     return line.id;
+  }
+
+  private extractErrorMessage(error: any, fallback: string): string {
+    return (
+      error?.error?.message || error?.error?.error || error?.message || fallback
+    );
   }
 }

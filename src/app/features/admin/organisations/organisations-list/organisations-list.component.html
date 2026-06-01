@@ -1,0 +1,471 @@
+<div class="page-container">
+  <nav class="breadcrumb">
+    <span>Administration</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Organisations</span>
+  </nav>
+
+  <header class="page-header">
+    <div class="page-header-text">
+      <h1 class="page-title">Organisations</h1>
+      <p class="page-subtitle">
+        Gérez les clients, partenaires et bailleurs de fonds utilisés dans les
+        fiches d’identification des projets.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button
+        mat-flat-button
+        class="btn-primary"
+        (click)="onCreateOrganisation()"
+      >
+        <mat-icon>add</mat-icon>
+        Nouvelle organisation
+      </button>
+    </div>
+  </header>
+
+  <section class="stats-grid">
+    <article class="stat-card accent-line">
+      <div class="stat-content">
+        <p class="stat-label">Organisations</p>
+        <h2 class="stat-value">{{ totalOrganisations }}</h2>
+        <div class="stat-footer muted">
+          <span>{{ activeOrganisationsCount }} active(s)</span>
+        </div>
+      </div>
+      <div class="stat-visual">
+        <mat-icon>business</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card accent-line neutral-accent">
+      <div class="stat-content">
+        <p class="stat-label">Clients</p>
+        <h2 class="stat-value">{{ clientsCount }}</h2>
+        <div class="stat-footer muted">
+          <span>Organisations de type client</span>
+        </div>
+      </div>
+      <div class="stat-visual">
+        <mat-icon>apartment</mat-icon>
+      </div>
+    </article>
+
+    <article class="stat-card success-accent">
+      <div class="stat-content">
+        <p class="stat-label">Partenaires / Bailleurs</p>
+        <h2 class="stat-value">{{ partenairesCount + bailleursCount }}</h2>
+        <div class="stat-footer positive">
+          <mat-icon>handshake</mat-icon>
+          <span
+            >{{ partenairesCount }} partenaire(s),
+            {{ bailleursCount }} bailleur(s)</span
+          >
+        </div>
+      </div>
+      <div class="stat-visual">
+        <mat-icon>groups</mat-icon>
+      </div>
+    </article>
+  </section>
+
+  <section class="table-card" *ngIf="errorMessage">
+    <div class="empty-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ errorMessage }}</p>
+      <button
+        mat-stroked-button
+        class="btn-secondary"
+        (click)="loadOrganisations()"
+      >
+        <mat-icon>refresh</mat-icon>
+        Réessayer
+      </button>
+    </div>
+  </section>
+
+  <ng-container *ngIf="!errorMessage">
+    <section class="toolbar-card">
+      <div class="toolbar-left">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Type</mat-label>
+          <mat-select
+            [value]="selectedType"
+            (selectionChange)="onTypeChange($event.value)"
+          >
+            <mat-option value="ALL">Tous les types</mat-option>
+            <mat-option
+              *ngFor="let type of organisationTypeOptions"
+              [value]="type.value"
+            >
+              {{ type.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Statut</mat-label>
+          <mat-select
+            [value]="selectedStatus"
+            (selectionChange)="onStatusChange($event.value)"
+          >
+            <mat-option value="ACTIVE">Actives</mat-option>
+            <mat-option value="INACTIVE">Inactives</mat-option>
+            <mat-option value="ALL">Tous</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div class="toolbar-right">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher une organisation</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            type="text"
+            [value]="searchTerm"
+            (input)="onSearchChange($any($event.target).value)"
+            placeholder="Filtrer par nom, pays, email, contact..."
+          />
+        </mat-form-field>
+      </div>
+    </section>
+
+    <section class="table-card" *ngIf="isLoading">
+      <div class="empty-state">
+        <mat-icon>hourglass_top</mat-icon>
+        <p>Chargement des organisations...</p>
+      </div>
+    </section>
+
+    <section class="table-card" *ngIf="!isLoading">
+      <ng-container *ngIf="hasNoOrganisations; else organisationsContent">
+        <div class="setup-empty-state">
+          <div class="setup-icon">
+            <mat-icon>business</mat-icon>
+          </div>
+          <h2>Aucune organisation créée</h2>
+          <p>
+            Créez les clients, partenaires et bailleurs de fonds afin de les
+            sélectionner ensuite dans les fiches projets.
+          </p>
+          <ul>
+            <li>Un client est obligatoire lors de la création d’un projet.</li>
+            <li>Les partenaires et bailleurs de fonds restent optionnels.</li>
+            <li>
+              Les organisations désactivées restent disponibles pour
+              l’historique.
+            </li>
+          </ul>
+          <button
+            mat-flat-button
+            class="btn-primary"
+            (click)="onCreateOrganisation()"
+          >
+            <mat-icon>add</mat-icon>
+            Nouvelle organisation
+          </button>
+        </div>
+      </ng-container>
+
+      <ng-template #organisationsContent>
+        <div class="table-wrapper">
+          <table class="roles-table organisations-table">
+            <thead>
+              <tr>
+                <th>ORGANISATION</th>
+                <th>TYPE</th>
+                <th>PAYS</th>
+                <th>CONTACT</th>
+                <th>EMAIL</th>
+                <th>STATUT</th>
+                <th class="actions-col">ACTIONS</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngIf="hasFilteredNoOrganisations">
+                <td colspan="7">
+                  <div class="empty-state">
+                    <mat-icon>search_off</mat-icon>
+                    <p>Aucune organisation ne correspond aux filtres.</p>
+                  </div>
+                </td>
+              </tr>
+
+              <tr
+                *ngFor="
+                  let item of pagedOrganisations;
+                  trackBy: trackByOrganisationId
+                "
+              >
+                <td>
+                  <div class="role-cell">
+                    <div class="role-icon-box">
+                      <mat-icon>business</mat-icon>
+                    </div>
+                    <div class="role-text">
+                      <div class="role-name">
+                        {{ getDisplayName(item) }}
+                      </div>
+                      <div class="role-module">
+                        <span>{{ item.nom }}</span>
+                        <span *ngIf="item.nomCourt">
+                          · {{ item.nomCourt }}</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                <td>
+                  <span class="type-chip">
+                    {{ getTypeLabel(item.type) }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="country-cell">
+                    {{ getCountryLabel(item) }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="text-muted">
+                    {{ item.contactPrincipal || "-" }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="text-muted">
+                    {{ item.email || "-" }}
+                  </span>
+                </td>
+
+                <td>
+                  <span
+                    class="status-chip"
+                    [class.active]="item.actif"
+                    [class.inactive]="!item.actif"
+                  >
+                    {{ getStatusLabel(item) }}
+                  </span>
+                </td>
+
+                <td class="actions-col">
+                  <div class="actions-cell">
+                    <button
+                      mat-icon-button
+                      class="action-icon"
+                      (click)="onViewOrganisation(item)"
+                    >
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+
+                    <button
+                      mat-icon-button
+                      class="action-icon"
+                      (click)="onEditOrganisation(item)"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+
+                    <button
+                      mat-icon-button
+                      class="action-icon delete"
+                      (click)="onDeleteOrganisation(item)"
+                      [disabled]="isDeleting || !item.actif"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <div class="table-results">
+            {{ filteredOrganisations.length }} organisation(s) affichée(s)
+          </div>
+
+          <mat-paginator
+            [length]="filteredOrganisations.length"
+            [pageIndex]="pageIndex"
+            [pageSize]="pageSize"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="onPageChange($event)"
+            showFirstLastButtons
+          >
+          </mat-paginator>
+        </div>
+      </ng-template>
+    </section>
+  </ng-container>
+
+  <div
+    class="drawer-overlay"
+    *ngIf="isDrawerOpen"
+    (click)="closeDrawer()"
+  ></div>
+
+  <aside class="tcc-drawer" *ngIf="isDrawerOpen">
+    <header class="drawer-header">
+      <div>
+        <h2>
+          {{
+            viewMode
+              ? "Détail organisation"
+              : editingOrganisationId
+                ? "Modifier l’organisation"
+                : "Nouvelle organisation"
+          }}
+        </h2>
+        <p>
+          Clients, partenaires et bailleurs de fonds utilisés dans les projets.
+        </p>
+      </div>
+
+      <button mat-icon-button class="drawer-close" (click)="closeDrawer()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </header>
+
+    <form
+      class="drawer-body"
+      [formGroup]="organisationForm"
+      (ngSubmit)="saveOrganisation()"
+    >
+      <article class="drawer-card">
+        <div class="drawer-card-title blue-title">
+          <span>01</span>
+          <h3>Identité</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Nom</mat-label>
+            <input matInput formControlName="nom" />
+            <mat-error *ngIf="nomControl?.hasError('required')">
+              Le nom est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nom court</mat-label>
+            <input matInput formControlName="nomCourt" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Type</mat-label>
+            <mat-select formControlName="type">
+              <mat-option
+                *ngFor="let type of organisationTypeOptions"
+                [value]="type.value"
+              >
+                {{ type.label }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="typeControl?.hasError('required')">
+              Le type est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-slide-toggle formControlName="actif" class="active-toggle">
+            Organisation active
+          </mat-slide-toggle>
+        </div>
+      </article>
+
+      <article class="drawer-card">
+        <div class="drawer-card-title slate-title">
+          <span>02</span>
+          <h3>Coordonnées</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Pays</mat-label>
+            <mat-select formControlName="paysCode">
+              <mat-option [value]="null">Aucun pays</mat-option>
+              <mat-option
+                *ngFor="let country of countries"
+                [value]="country.code"
+              >
+                {{ country.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Téléphone</mat-label>
+            <input matInput formControlName="telephone" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Email</mat-label>
+            <input matInput formControlName="email" />
+            <mat-error *ngIf="emailControl?.hasError('email')">
+              Email invalide.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Contact principal</mat-label>
+            <input matInput formControlName="contactPrincipal" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Adresse</mat-label>
+            <input matInput formControlName="adresse" />
+          </mat-form-field>
+        </div>
+      </article>
+
+      <article class="drawer-card">
+        <div class="drawer-card-title green-title">
+          <span>03</span>
+          <h3>Notes</h3>
+        </div>
+
+        <div class="drawer-grid one-column">
+          <mat-form-field appearance="outline">
+            <mat-label>Notes</mat-label>
+            <textarea matInput rows="4" formControlName="notes"></textarea>
+          </mat-form-field>
+        </div>
+      </article>
+    </form>
+
+    <footer class="drawer-footer">
+      <button
+        mat-stroked-button
+        type="button"
+        class="btn-secondary"
+        (click)="closeDrawer()"
+      >
+        Fermer
+      </button>
+
+      <button
+        mat-flat-button
+        type="button"
+        class="btn-primary"
+        (click)="saveOrganisation()"
+        [disabled]="organisationForm.invalid || isSaving || viewMode"
+      >
+        <mat-icon>
+          {{ isSaving ? "hourglass_top" : "save" }}
+        </mat-icon>
+        {{
+          editingOrganisationId
+            ? "Enregistrer les modifications"
+            : "Enregistrer l’organisation"
+        }}
+      </button>
+    </footer>
+  </aside>
+</div>

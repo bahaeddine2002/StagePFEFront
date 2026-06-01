@@ -136,7 +136,7 @@ export class ProjetsListComponent implements OnInit {
   }
 
   onOpenDevisInterne(projet: ProjetResponse): void {
-    this.router.navigate(["/projets", projet.id, "devis-interne"]);
+    this.router.navigate(["/projets", projet.id, "di"]);
   }
 
   onEdit(projet: ProjetResponse): void {

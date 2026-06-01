@@ -1,0 +1,291 @@
+<div class="drawer-overlay" (click)="close()"></div>
+
+<aside class="di-drawer">
+  <header class="drawer-header">
+    <div>
+      <div class="drawer-title-row">
+        <h2>{{ drawerTitle }}</h2>
+
+        <span class="drawer-status" [class.negative]="!isFacture">
+          {{ isFacture ? "Facturée" : "Non facturée" }}
+        </span>
+      </div>
+
+      <p>{{ drawerSubtitle }}</p>
+    </div>
+
+    <button
+      mat-icon-button
+      class="drawer-close"
+      type="button"
+      (click)="close()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="drawer-body">
+      <section
+        class="drawer-warning"
+        *ngIf="
+          form.get('pourcentage')?.hasError('maxPourcentage') &&
+          form.get('pourcentage')?.touched
+        "
+      >
+        <mat-icon>warning_amber</mat-icon>
+        <span>
+          Le pourcentage dépasse le reste planifiable. Maximum autorisé :
+          {{ formatPercent(maxAllowedPourcentage) }}%.
+        </span>
+      </section>
+
+      <!-- 01 Identification -->
+      <article class="drawer-card">
+        <div class="drawer-card-title blue-title">
+          <span>01</span>
+          <h3>Identification de l’échéance</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Description</mat-label>
+            <input
+              matInput
+              formControlName="description"
+              placeholder="Ex: Facture 1"
+            />
+            <mat-error *ngIf="form.get('description')?.hasError('required')">
+              La description est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Évènement</mat-label>
+            <input
+              matInput
+              formControlName="evenement"
+              placeholder="Ex: Signature du contrat"
+            />
+            <mat-error *ngIf="form.get('evenement')?.hasError('required')">
+              L’évènement est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Pourcentage</mat-label>
+            <input
+              matInput
+              type="number"
+              formControlName="pourcentage"
+              placeholder="Ex: 30"
+            />
+            <span matSuffix>%</span>
+
+            <mat-error *ngIf="form.get('pourcentage')?.hasError('required')">
+              Le pourcentage est obligatoire.
+            </mat-error>
+
+            <mat-error *ngIf="form.get('pourcentage')?.hasError('min')">
+              Le pourcentage doit être supérieur à 0.
+            </mat-error>
+
+            <mat-error
+              *ngIf="form.get('pourcentage')?.hasError('maxPourcentage')"
+            >
+              Maximum autorisé :
+              {{ formatPercent(maxAllowedPourcentage) }}%.
+            </mat-error>
+          </mat-form-field>
+
+          <div class="drawer-field readonly-box">
+            <span>Reste planifiable</span>
+            <strong>{{ formatPercent(maxAllowedPourcentage) }}%</strong>
+          </div>
+        </div>
+
+        <div class="drawer-total-line">
+          <span>Montant prévu</span>
+          <strong> {{ formatMoney(montantPreview) }} {{ deviseCode }} </strong>
+        </div>
+
+        <div class="drawer-total-line">
+          <span>Montant prévu en TND</span>
+          <strong>{{ formatMoney(montantPreviewTnd) }} TND</strong>
+        </div>
+      </article>
+
+      <!-- 02 Dates -->
+      <article class="drawer-card">
+        <div class="drawer-card-title slate-title">
+          <span>02</span>
+          <h3>Dates de facturation</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Date initiale</mat-label>
+            <input matInput type="date" formControlName="dateInitiale" />
+            <mat-error *ngIf="form.get('dateInitiale')?.hasError('required')">
+              La date initiale est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date prévisionnelle</mat-label>
+            <input matInput type="date" formControlName="datePrevisionnelle" />
+            <mat-error
+              *ngIf="form.get('datePrevisionnelle')?.hasError('required')"
+            >
+              La date prévisionnelle est obligatoire.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" *ngIf="isEditMode">
+            <mat-label>Date réelle</mat-label>
+            <input matInput type="date" formControlName="dateReelle" />
+          </mat-form-field>
+
+          <div class="drawer-field readonly-box">
+            <span>Règle appliquée</span>
+            <strong>
+              {{
+                isEditMode
+                  ? isFacture
+                    ? "Date réelle optionnelle"
+                    : "Désactivée si non facturée"
+                  : "À renseigner après facturation"
+              }}
+            </strong>
+          </div>
+        </div>
+      </article>
+
+      <!-- 03 Facturation & paiement -->
+      <article class="drawer-card" *ngIf="isEditMode">
+        <div class="drawer-card-title green-title">
+          <span>03</span>
+          <h3>Facturation & paiement</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <div class="toggle-field">
+            <span>Facturé</span>
+            <mat-slide-toggle formControlName="facture">
+              {{ isFacture ? "Oui" : "Non" }}
+            </mat-slide-toggle>
+          </div>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Référence facture</mat-label>
+            <input
+              matInput
+              formControlName="referenceFacture"
+              placeholder="Ex: FAC-2026-001"
+            />
+          </mat-form-field>
+
+          <div class="toggle-field">
+            <span>Réglé</span>
+            <mat-slide-toggle formControlName="regle">
+              {{ form.get("regle")?.value ? "Oui" : "Non" }}
+            </mat-slide-toggle>
+          </div>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Montant payé</mat-label>
+            <input matInput type="number" formControlName="montantPaye" />
+            <span matSuffix>{{ deviseCode }}</span>
+
+            <mat-error *ngIf="form.get('montantPaye')?.hasError('min')">
+              Le montant payé ne peut pas être négatif.
+            </mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="drawer-warning soft-warning" *ngIf="!isFacture">
+          <mat-icon>info</mat-icon>
+          <span>
+            Si l’échéance n’est pas facturée, la date réelle, le règlement et le
+            montant payé seront automatiquement remis à zéro.
+          </span>
+        </div>
+      </article>
+
+      <!-- 04 Commentaires -->
+      <article class="drawer-card">
+        <div class="drawer-card-title slate-title">
+          <span>{{ isEditMode ? "04" : "03" }}</span>
+          <h3>Commentaires</h3>
+        </div>
+
+        <div class="drawer-full">
+          <mat-form-field appearance="outline">
+            <mat-label>Commentaires</mat-label>
+            <textarea
+              matInput
+              rows="4"
+              formControlName="commentaires"
+              placeholder="Ajouter une remarque..."
+            ></textarea>
+          </mat-form-field>
+        </div>
+      </article>
+
+      <!-- 05 Aperçu calculé en mode modification -->
+      <article class="drawer-card" *ngIf="isEditMode && echeanceToEdit">
+        <div class="drawer-card-title blue-title">
+          <span>05</span>
+          <h3>Aperçu calculé</h3>
+        </div>
+
+        <div class="drawer-grid">
+          <div class="drawer-field readonly-box">
+            <span>Ordre</span>
+            <strong>Échéance {{ echeanceToEdit.ordre }}</strong>
+          </div>
+
+          <div class="drawer-field readonly-box">
+            <span>Statut paiement</span>
+            <strong>{{ echeanceToEdit.statutPaiement }}</strong>
+          </div>
+
+          <div class="drawer-field readonly-box">
+            <span>Cumul facturation</span>
+            <strong>
+              {{ formatPercent(echeanceToEdit.cumulFacturationPourcentage) }}%
+            </strong>
+          </div>
+
+          <div class="drawer-field readonly-box">
+            <span>Reste après échéance</span>
+            <strong>
+              {{ formatPercent(echeanceToEdit.resteAFacturerPourcentage) }}%
+            </strong>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <footer class="drawer-footer">
+      <button
+        mat-stroked-button
+        class="btn-secondary"
+        type="button"
+        (click)="close()"
+      >
+        Annuler
+      </button>
+
+      <button
+        mat-flat-button
+        class="btn-primary"
+        type="submit"
+        [disabled]="!canSave"
+      >
+        <mat-icon>save</mat-icon>
+        {{ isSaving ? "Enregistrement..." : "Enregistrer l’échéance" }}
+      </button>
+    </footer>
+  </form>
+</aside>

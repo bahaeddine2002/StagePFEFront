@@ -61,6 +61,11 @@ export const SECTION_NAV_ITEMS: Record<TopSection, NavItem[]> = {
       route: "/admin/tcc",
       permission: PERMISSIONS.PROJETS_TCC,
     },
+    {
+      label: "Organisations",
+      route: "/admin/organisations",
+      icon: "business",
+    },
   ],
 };
 

@@ -10,6 +10,10 @@
 
         <h1 class="login-title">Connexion</h1>
         <p class="login-subtitle">Accédez à votre espace ST2i Enterprise</p>
+        <div class="login-error-box" *ngIf="loginErrorMessage">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ loginErrorMessage }}</span>
+        </div>
 
         <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
           <div class="form-group">

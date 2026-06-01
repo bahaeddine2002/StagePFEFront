@@ -49,9 +49,12 @@ export class DevisInterneService {
     );
   }
 
-  deleteLigneHonoraire(ligneId: number): Observable<DevisInterneResponse> {
+  deleteLigneHonoraire(
+    diId: number,
+    ligneId: number,
+  ): Observable<DevisInterneResponse> {
     return this.http.delete<DevisInterneResponse>(
-      `${this.baseUrl}application-service/api/devis-internes/lignes/${ligneId}`,
+      `${this.baseUrl}application-service/api/devis-internes/${diId}/lignes/honoraires/${ligneId}`,
     );
   }
 

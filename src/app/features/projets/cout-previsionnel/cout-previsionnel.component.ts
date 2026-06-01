@@ -1,202 +1,217 @@
-import { Component } from "@angular/core";
+import { Component, OnInit } from "@angular/core";
+import { ActivatedRoute, Router } from "@angular/router";
+import { finalize } from "rxjs";
+
+import { CoutPrevisionnelService } from "../services/cout-previsionnel.service";
+import {
+  CoutPrevisionnelMonth,
+  CoutPrevisionnelResource,
+  CoutPrevisionnelResponse,
+  CoutPrevisionnelSaveRequest,
+} from "../models/cout-previsionnel.model";
+import { ToastService } from "src/app/shared/toast/toast.service.ts.service";
 
 type ActiveTab = "PLAN_CHARGE" | "COUTS_CALCULES";
-
-interface MonthColumn {
-  key: string;
-  label: string;
-}
-
-interface CoutPrevisionnelResource {
-  id: number;
-  nomComplet: string;
-  matricule: string;
-  profil: string;
-  tjm: number;
-  jours: Record<string, number | null>;
-}
 
 @Component({
   selector: "app-cout-previsionnel",
   templateUrl: "./cout-previsionnel.component.html",
   styleUrls: ["./cout-previsionnel.component.css"],
 })
-export class CoutPrevisionnelComponent {
+export class CoutPrevisionnelComponent implements OnInit {
   activeTab: ActiveTab = "PLAN_CHARGE";
 
-  selectedYear = 2025;
+  projectId!: number;
+
+  isLoading = false;
+  isSaving = false;
+  isDirty = false;
+  errorMessage: string | null = null;
+
+  selectedYear: number | null = null;
   selectedResource = "ALL";
   searchTerm = "";
 
-  projectName = "Tunisair";
-  projectPeriod = "Janvier 2025 à Août 2026";
+  projectName = "—";
+  projectPeriod = "—";
   devise = "TND";
 
-  months: MonthColumn[] = [
-    { key: "jan", label: "Jan" },
-    { key: "fev", label: "Fév" },
-    { key: "mar", label: "Mar" },
-    { key: "avr", label: "Avr" },
-    { key: "mai", label: "Mai" },
-    { key: "juin", label: "Juin" },
-    { key: "juil", label: "Juil" },
-    { key: "aout", label: "Août" },
-    { key: "sep", label: "Sep" },
-    { key: "oct", label: "Oct" },
-    { key: "nov", label: "Nov" },
-    { key: "dec", label: "Déc" },
-  ];
+  allMonths: CoutPrevisionnelMonth[] = [];
+  resources: CoutPrevisionnelResource[] = [];
 
-  resources: CoutPrevisionnelResource[] = [
-    {
-      id: 1,
-      nomComplet: "Ahmed Ben Salah",
-      matricule: "EMP-001",
-      profil: "Consultant",
-      tjm: 800,
-      jours: {
-        jan: null,
-        fev: 0.5,
-        mar: 0.5,
-        avr: null,
-        mai: null,
-        juin: null,
-        juil: null,
-        aout: null,
-        sep: null,
-        oct: null,
-        nov: null,
-        dec: null,
-      },
-    },
-    {
-      id: 2,
-      nomComplet: "Syrine Trabelsi",
-      matricule: "EMP-002",
-      profil: "Développeuse",
-      tjm: 650,
-      jours: {
-        jan: null,
-        fev: 10,
-        mar: 12,
-        avr: 12,
-        mai: 10,
-        juin: null,
-        juil: null,
-        aout: null,
-        sep: null,
-        oct: null,
-        nov: null,
-        dec: null,
-      },
-    },
-    {
-      id: 3,
-      nomComplet: "Youssef Gharbi",
-      matricule: "EMP-003",
-      profil: "Chef de projet",
-      tjm: 900,
-      jours: {
-        jan: 2,
-        fev: 4,
-        mar: 4,
-        avr: 5,
-        mai: 5,
-        juin: 3,
-        juil: null,
-        aout: null,
-        sep: null,
-        oct: null,
-        nov: null,
-        dec: null,
-      },
-    },
-    {
-      id: 4,
-      nomComplet: "Amira Jebali",
-      matricule: "EMP-004",
-      profil: "Analyste QA",
-      tjm: 500,
-      jours: {
-        jan: null,
-        fev: null,
-        mar: 5,
-        avr: 8,
-        mai: 8,
-        juin: 8,
-        juil: 4,
-        aout: null,
-        sep: null,
-        oct: null,
-        nov: null,
-        dec: null,
-      },
-    },
-    {
-      id: 5,
-      nomComplet: "Marwen Saidi",
-      matricule: "EMP-005",
-      profil: "Expert technique",
-      tjm: 750,
-      jours: {
-        jan: null,
-        fev: 5,
-        mar: 7,
-        avr: 7,
-        mai: 7,
-        juin: 6,
-        juil: 5,
-        aout: null,
-        sep: null,
-        oct: null,
-        nov: null,
-        dec: null,
-      },
-    },
-  ];
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private coutPrevisionnelService: CoutPrevisionnelService,
+    private toastService: ToastService,
+  ) {}
+
+  ngOnInit(): void {
+    const idParam =
+      this.route.snapshot.paramMap.get("projectId") ??
+      this.route.snapshot.paramMap.get("id");
+
+    if (!idParam || Number.isNaN(Number(idParam))) {
+      this.errorMessage = "Identifiant du projet invalide.";
+      return;
+    }
+
+    this.projectId = Number(idParam);
+    this.loadCoutPrevisionnel();
+  }
+
+  loadCoutPrevisionnel(): void {
+    this.isLoading = true;
+    this.errorMessage = null;
+
+    this.coutPrevisionnelService
+      .getCoutPrevisionnel(this.projectId)
+      .pipe(finalize(() => (this.isLoading = false)))
+      .subscribe({
+        next: (response) => {
+          this.applyResponse(response);
+          this.isDirty = false;
+        },
+        error: (error) => {
+          this.errorMessage = this.extractErrorMessage(
+            error,
+            "Impossible de charger le coût prévisionnel.",
+          );
+          this.toastService.error(this.errorMessage);
+        },
+      });
+  }
+
+  private applyResponse(response: CoutPrevisionnelResponse): void {
+    this.projectName = response.nomProjet || "—";
+    this.devise = response.devise || "TND";
+    this.projectPeriod = this.buildProjectPeriod(
+      response.dateDebut,
+      response.dateFin,
+    );
+
+    this.allMonths = response.months || [];
+    this.resources = response.resources || [];
+
+    if (!this.selectedYear && this.availableYears.length > 0) {
+      this.selectedYear = this.availableYears[0];
+    }
+
+    if (
+      this.selectedYear &&
+      this.availableYears.length > 0 &&
+      !this.availableYears.includes(this.selectedYear)
+    ) {
+      this.selectedYear = this.availableYears[0];
+    }
+  }
+
+  // =========================================================
+  // Months / filters
+  // =========================================================
+
+  get months(): CoutPrevisionnelMonth[] {
+    if (!this.selectedYear) {
+      return this.allMonths;
+    }
+
+    return this.allMonths.filter((month) => {
+      return this.getYearFromMonthKey(month.key) === this.selectedYear;
+    });
+  }
+
+  get availableYears(): number[] {
+    const years = this.allMonths
+      .map((month) => this.getYearFromMonthKey(month.key))
+      .filter((year): year is number => year !== null);
+
+    return Array.from(new Set(years)).sort((a, b) => a - b);
+  }
 
   get filteredResources(): CoutPrevisionnelResource[] {
+    const normalizedSearch = this.searchTerm.trim().toLowerCase();
+
     return this.resources.filter((resource) => {
       const matchesResource =
         this.selectedResource === "ALL" ||
-        resource.id === Number(this.selectedResource);
+        resource.ligneDevisInterneId === Number(this.selectedResource);
 
-      const normalizedSearch = this.searchTerm.trim().toLowerCase();
+      const nom = (resource.nomComplet || "").toLowerCase();
+      const matricule = (resource.matricule || "").toLowerCase();
+      const designation = (resource.designation || "").toLowerCase();
 
       const matchesSearch =
         !normalizedSearch ||
-        resource.nomComplet.toLowerCase().includes(normalizedSearch) ||
-        resource.matricule.toLowerCase().includes(normalizedSearch) ||
-        resource.profil.toLowerCase().includes(normalizedSearch);
+        nom.includes(normalizedSearch) ||
+        matricule.includes(normalizedSearch) ||
+        designation.includes(normalizedSearch);
 
       return matchesResource && matchesSearch;
     });
   }
 
+  get hasNoResources(): boolean {
+    return !this.isLoading && !this.errorMessage && this.resources.length === 0;
+  }
+
+  // =========================================================
+  // Global stats cards = all project years
+  // =========================================================
+
   get totalResourcesPlanifiees(): number {
     return this.resources.length;
   }
 
-  get totalJoursPrevus(): number {
-    return this.resources.reduce(
-      (total, resource) => total + this.getResourceTotalDays(resource),
-      0,
-    );
+  get totalJoursPrevusGlobal(): number {
+    return this.resources.reduce((total, resource) => {
+      return (
+        total + this.getResourceTotalDaysForMonths(resource, this.allMonths)
+      );
+    }, 0);
   }
 
-  get totalCoutPrevisionnel(): number {
-    return this.resources.reduce(
-      (total, resource) => total + this.getResourceTotalCost(resource),
-      0,
-    );
+  get totalCoutPrevisionnelGlobal(): number {
+    return this.resources.reduce((total, resource) => {
+      return (
+        total + this.getResourceTotalCostForMonths(resource, this.allMonths)
+      );
+    }, 0);
   }
 
   get budgetConsommePercent(): number {
+    // TODO: Replace this later with budgetProjet from backend/project detail.
     const budgetProjet = 720000;
-    return budgetProjet > 0
-      ? (this.totalCoutPrevisionnel / budgetProjet) * 100
-      : 0;
+
+    if (budgetProjet <= 0) {
+      return 0;
+    }
+
+    return (this.totalCoutPrevisionnelGlobal / budgetProjet) * 100;
   }
+
+  // =========================================================
+  // Table totals = selected year + current filters
+  // =========================================================
+
+  get totalJoursPrevusAnnee(): number {
+    return this.filteredResources.reduce((total, resource) => {
+      return total + this.getResourceTotalDaysForMonths(resource, this.months);
+    }, 0);
+  }
+
+  get totalCoutPrevisionnelAnnee(): number {
+    return this.filteredResources.reduce((total, resource) => {
+      return total + this.getResourceTotalCostForMonths(resource, this.months);
+    }, 0);
+  }
+
+  get selectedYearLabel(): string {
+    return this.selectedYear ? this.selectedYear.toString() : "Toutes années";
+  }
+
+  // =========================================================
+  // UI actions
+  // =========================================================
 
   setActiveTab(tab: ActiveTab): void {
     this.activeTab = tab;
@@ -217,21 +232,10 @@ export class CoutPrevisionnelComponent {
   resetFilters(): void {
     this.selectedResource = "ALL";
     this.searchTerm = "";
-  }
 
-  recalculate(): void {
-    // Static for now.
-    // Later this will call backend recalculation or update local computed state.
-  }
-
-  save(): void {
-    // Static for now.
-    // Later this will send the plan de charge to the backend.
-  }
-
-  exportExcel(): void {
-    // Static for now.
-    // Later this will call export API.
+    if (this.availableYears.length > 0) {
+      this.selectedYear = this.availableYears[0];
+    }
   }
 
   updateDays(
@@ -244,22 +248,107 @@ export class CoutPrevisionnelComponent {
 
     if (rawValue === "") {
       resource.jours[monthKey] = null;
+      this.isDirty = true;
       return;
     }
 
     const value = Number(rawValue);
 
-    resource.jours[monthKey] = Number.isNaN(value) ? null : value;
+    if (Number.isNaN(value)) {
+      resource.jours[monthKey] = null;
+      this.isDirty = true;
+      return;
+    }
+
+    if (value < 0) {
+      this.toastService.error("Le nombre de jours ne peut pas être négatif.");
+      input.value = resource.jours[monthKey]?.toString() ?? "";
+      return;
+    }
+
+    resource.jours[monthKey] = value;
+    this.isDirty = true;
   }
 
+  save(): void {
+    if (!this.isDirty || this.isSaving) {
+      return;
+    }
+
+    const payload: CoutPrevisionnelSaveRequest = {
+      resources: this.resources.map((resource) => ({
+        ligneDevisInterneId: resource.ligneDevisInterneId,
+        jours: resource.jours,
+      })),
+    };
+
+    this.isSaving = true;
+
+    this.coutPrevisionnelService
+      .saveCoutPrevisionnel(this.projectId, payload)
+      .pipe(finalize(() => (this.isSaving = false)))
+      .subscribe({
+        next: () => {
+          this.toastService.success(
+            "Coût prévisionnel enregistré avec succès.",
+          );
+          this.isDirty = false;
+          this.loadCoutPrevisionnel();
+        },
+        error: (error) => {
+          const message = this.extractErrorMessage(
+            error,
+            "Erreur lors de l’enregistrement du coût prévisionnel.",
+          );
+          this.toastService.error(message);
+        },
+      });
+  }
+
+  recalculate(): void {
+    this.toastService.success("Les coûts sont recalculés automatiquement.");
+  }
+
+  exportExcel(): void {
+    this.toastService.error("L’export Excel n’est pas encore disponible.");
+  }
+
+  goBack(): void {
+    this.router.navigate(["/projets"]);
+  }
+
+  goToDevisInterne(): void {
+    this.router.navigate(["/projets", this.projectId, "di"]);
+  }
+
+  // =========================================================
+  // Calculations
+  // =========================================================
+
   getResourceTotalDays(resource: CoutPrevisionnelResource): number {
-    return this.months.reduce((total, month) => {
+    return this.getResourceTotalDaysForMonths(resource, this.months);
+  }
+
+  getResourceTotalCost(resource: CoutPrevisionnelResource): number {
+    return this.getResourceTotalCostForMonths(resource, this.months);
+  }
+
+  private getResourceTotalDaysForMonths(
+    resource: CoutPrevisionnelResource,
+    months: CoutPrevisionnelMonth[],
+  ): number {
+    return months.reduce((total, month) => {
       return total + (resource.jours[month.key] ?? 0);
     }, 0);
   }
 
-  getResourceTotalCost(resource: CoutPrevisionnelResource): number {
-    return this.getResourceTotalDays(resource) * resource.tjm;
+  private getResourceTotalCostForMonths(
+    resource: CoutPrevisionnelResource,
+    months: CoutPrevisionnelMonth[],
+  ): number {
+    return (
+      this.getResourceTotalDaysForMonths(resource, months) * (resource.tjm ?? 0)
+    );
   }
 
   getMonthTotalDays(monthKey: string): number {
@@ -271,13 +360,13 @@ export class CoutPrevisionnelComponent {
   getMonthTotalCost(monthKey: string): number {
     return this.filteredResources.reduce((total, resource) => {
       const days = resource.jours[monthKey] ?? 0;
-      return total + days * resource.tjm;
+      return total + days * (resource.tjm ?? 0);
     }, 0);
   }
 
   getMonthCost(resource: CoutPrevisionnelResource, monthKey: string): number {
     const days = resource.jours[monthKey] ?? 0;
-    return days * resource.tjm;
+    return days * (resource.tjm ?? 0);
   }
 
   hasMonthValue(resource: CoutPrevisionnelResource, monthKey: string): boolean {
@@ -288,7 +377,7 @@ export class CoutPrevisionnelComponent {
   }
 
   getCumulDaysRemaining(monthIndex: number): number {
-    const total = this.totalJoursPrevus;
+    const total = this.totalJoursPrevusAnnee;
 
     const consumedUntilMonth = this.months
       .slice(0, monthIndex + 1)
@@ -298,7 +387,7 @@ export class CoutPrevisionnelComponent {
   }
 
   getCumulCostRemaining(monthIndex: number): number {
-    const total = this.totalCoutPrevisionnel;
+    const total = this.totalCoutPrevisionnelAnnee;
 
     const consumedUntilMonth = this.months
       .slice(0, monthIndex + 1)
@@ -307,25 +396,63 @@ export class CoutPrevisionnelComponent {
     return Math.max(total - consumedUntilMonth, 0);
   }
 
+  // =========================================================
+  // Formatting
+  // =========================================================
+
   formatMoney(value: number): string {
     return new Intl.NumberFormat("fr-FR", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
+    }).format(value || 0);
   }
 
   formatNumber(value: number): string {
+    const safeValue = value || 0;
+
     return new Intl.NumberFormat("fr-FR", {
-      minimumFractionDigits: value % 1 === 0 ? 0 : 1,
+      minimumFractionDigits: safeValue % 1 === 0 ? 0 : 1,
       maximumFractionDigits: 1,
-    }).format(value);
+    }).format(safeValue);
   }
 
   trackByResourceId(_: number, resource: CoutPrevisionnelResource): number {
-    return resource.id;
+    return resource.ligneDevisInterneId;
   }
 
-  trackByMonthKey(_: number, month: MonthColumn): string {
+  trackByMonthKey(_: number, month: CoutPrevisionnelMonth): string {
     return month.key;
+  }
+
+  private getYearFromMonthKey(monthKey: string): number | null {
+    const year = Number(monthKey?.split("-")[0]);
+    return Number.isNaN(year) ? null : year;
+  }
+
+  private buildProjectPeriod(dateDebut: string, dateFin: string): string {
+    if (!dateDebut || !dateFin) {
+      return "—";
+    }
+
+    return `${this.formatDate(dateDebut)} à ${this.formatDate(dateFin)}`;
+  }
+
+  private formatDate(date: string): string {
+    return new Intl.DateTimeFormat("fr-FR", {
+      month: "long",
+      year: "numeric",
+    }).format(new Date(date));
+  }
+
+  private extractErrorMessage(error: any, fallback: string): string {
+    if (error?.error?.message) {
+      return error.error.message;
+    }
+
+    if (typeof error?.error === "string") {
+      return error.error;
+    }
+
+    return fallback;
   }
 }

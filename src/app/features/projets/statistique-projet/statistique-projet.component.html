@@ -1,0 +1,881 @@
+<div class="fiche-page">
+  <!-- Loading / Error / Success states -->
+  <div *ngIf="isLoadingPeriodes" class="state-card">
+    <mat-icon>hourglass_empty</mat-icon>
+    Chargement des périodes de revue...
+  </div>
+
+  <div *ngIf="isLoadingRevue && !isLoadingPeriodes" class="state-card">
+    <mat-icon>hourglass_empty</mat-icon>
+    Chargement de la revue sélectionnée...
+  </div>
+
+  <div *ngIf="isLoadingHistory && activeTab === 'history'" class="state-card">
+    <mat-icon>hourglass_empty</mat-icon>
+    Chargement de l’historique des revues...
+  </div>
+
+  <div *ngIf="errorMessage && !isLoadingPeriodes" class="state-card error">
+    <mat-icon>error_outline</mat-icon>
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="successMessage && !errorMessage" class="state-card success">
+    <mat-icon>check_circle</mat-icon>
+    {{ successMessage }}
+  </div>
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <span>Projets</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span>Liste des projets</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Statistique</span>
+  </div>
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="title-line">
+        <h1>Statistique du projet</h1>
+
+        <span class="badge badge-code"> Projet #{{ projetId }} </span>
+
+        <span class="badge badge-status">
+          <span class="status-dot"></span>
+          Revue mensuelle
+        </span>
+      </div>
+
+      <p class="page-subtitle">
+        Suivi mensuel de l’avancement, des coûts et des indicateurs du projet.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-secondary" type="button" (click)="onBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Retour
+      </button>
+
+      <button
+        class="btn btn-secondary"
+        type="button"
+        [disabled]="!hasSelectedRevueForCurrentPeriode || isDeleting"
+        (click)="deleteSelectedRevue()"
+      >
+        <mat-icon>delete_outline</mat-icon>
+        Supprimer
+      </button>
+
+      <button
+        class="btn btn-primary"
+        type="button"
+        [disabled]="!canSave"
+        (click)="saveRevue()"
+      >
+        <mat-icon>save</mat-icon>
+        {{ isSaving ? "Enregistrement..." : "Enregistrer la revue" }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tcc-tabs-card">
+    <button
+      type="button"
+      class="tcc-tab"
+      [class.active]="activeTab === 'monthly'"
+      (click)="setTab('monthly')"
+    >
+      <mat-icon>query_stats</mat-icon>
+      Revue mensuelle
+    </button>
+
+    <button
+      type="button"
+      class="tcc-tab"
+      [class.active]="activeTab === 'history'"
+      (click)="setTab('history')"
+    >
+      <mat-icon>history</mat-icon>
+      Historique des revues
+    </button>
+  </div>
+
+  <!-- MONTHLY TAB -->
+  <ng-container *ngIf="activeTab === 'monthly'">
+    <!-- Period selector card -->
+    <section class="fiche-card accent-blue period-card">
+      <div class="card-header">
+        <span class="header-icon blue">
+          <mat-icon>event</mat-icon>
+        </span>
+
+        <h2>Période de revue</h2>
+      </div>
+
+      <div class="card-body compact">
+        <div class="period-content">
+          <div class="period-left">
+            <div class="field-box period-select-box">
+              <label>Mois de revue</label>
+
+              <select
+                class="editable-input"
+                [value]="selectedPeriode"
+                [disabled]="isLoadingPeriodes || periodes.length === 0"
+                (change)="onPeriodeChange($any($event.target).value)"
+              >
+                <option value="">Sélectionner une période</option>
+
+                <option
+                  *ngFor="let periode of periodes; trackBy: trackByPeriode"
+                  [value]="periode.periode"
+                >
+                  {{ periode.label }}
+                </option>
+              </select>
+            </div>
+
+            <div class="field-box status-field">
+              <label>Statut</label>
+
+              <div
+                class="readonly-value status-pill"
+                [class.status-created]="selectedPeriodeInfo?.revueExiste"
+                [class.status-missing]="!selectedPeriodeInfo?.revueExiste"
+              >
+                {{
+                  selectedPeriodeInfo?.revueExiste ? "Revue créée" : "Non créée"
+                }}
+              </div>
+            </div>
+          </div>
+
+          <div class="period-note">
+            <mat-icon>info</mat-icon>
+            <span>
+              Les indicateurs sont calculés à partir des modules Honoraires,
+              Livrables, Coût prévisionnel et Coût actualisé.
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Initial state: no selected month -->
+    <section
+      *ngIf="
+        !isLoadingPeriodes &&
+        !isLoadingRevue &&
+        periodes.length > 0 &&
+        !selectedPeriode
+      "
+      class="fiche-card accent-blue create-card"
+    >
+      <div class="card-header">
+        <span class="header-icon blue">
+          <mat-icon>calendar_month</mat-icon>
+        </span>
+
+        <h2>Sélectionner une période</h2>
+      </div>
+
+      <div class="card-body">
+        <div class="no-revue-intro">
+          <div class="empty-icon">
+            <mat-icon>event</mat-icon>
+          </div>
+
+          <div>
+            <h3>Aucune période sélectionnée</h3>
+            <p>
+              Veuillez choisir un mois de revue pour afficher ou créer la revue
+              mensuelle correspondante.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- No periods -->
+    <section
+      *ngIf="!isLoadingPeriodes && periodes.length === 0"
+      class="fiche-card accent-blue create-card"
+    >
+      <div class="card-header">
+        <span class="header-icon blue">
+          <mat-icon>event_busy</mat-icon>
+        </span>
+
+        <h2>Aucune période disponible</h2>
+      </div>
+
+      <div class="card-body">
+        <div class="no-revue-intro">
+          <div class="empty-icon">
+            <mat-icon>calendar_month</mat-icon>
+          </div>
+
+          <div>
+            <h3>Impossible de générer les périodes de revue</h3>
+            <p>
+              Vérifiez que le projet possède une date de démarrage et une date
+              de fin initiale prévue.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- No revue state + creation form -->
+    <section
+      *ngIf="
+        !isLoadingPeriodes &&
+        !isLoadingRevue &&
+        selectedPeriode &&
+        selectedPeriodeInfo &&
+        !selectedPeriodeInfo.revueExiste &&
+        !hasSelectedRevueForCurrentPeriode
+      "
+      class="fiche-card accent-blue create-card"
+    >
+      <div class="card-header">
+        <span class="header-icon blue">
+          <mat-icon>add_task</mat-icon>
+        </span>
+
+        <h2>Créer la revue mensuelle</h2>
+      </div>
+
+      <div class="card-body">
+        <div class="no-revue-intro">
+          <div class="empty-icon">
+            <mat-icon>event_note</mat-icon>
+          </div>
+
+          <div>
+            <h3>Aucune revue créée pour {{ selectedPeriodeInfo.label }}</h3>
+
+            <p>
+              Renseignez les informations manuelles. Le système calculera les
+              indicateurs de suivi à partir des données projet.
+            </p>
+          </div>
+        </div>
+
+        <div class="fields-grid three">
+          <div class="field-box">
+            <label>Earned Value (%)</label>
+
+            <input
+              class="editable-input"
+              type="number"
+              min="0"
+              max="100"
+              [(ngModel)]="draftRevueForm.earnedValuePourcentage"
+              placeholder="Ex: 60"
+            />
+          </div>
+
+          <div class="field-box">
+            <label>Date fin prévisionnelle</label>
+
+            <input
+              class="editable-input"
+              type="date"
+              [(ngModel)]="draftRevueForm.dateFinPrevisionnelle"
+            />
+          </div>
+
+          <div class="field-box">
+            <label>Période sélectionnée</label>
+
+            <div class="readonly-value calculated">
+              {{ selectedPeriodeInfo.label }}
+            </div>
+          </div>
+        </div>
+
+        <div class="field-box">
+          <label>Observations et faits marquants</label>
+
+          <textarea
+            class="editable-textarea"
+            rows="4"
+            [(ngModel)]="draftRevueForm.observationsFaitsMarquants"
+            placeholder="Saisir les observations et faits marquants du mois..."
+          ></textarea>
+        </div>
+
+        <div class="create-actions">
+          <button
+            class="btn btn-primary"
+            type="button"
+            [disabled]="!canCreate"
+            (click)="createRevue()"
+          >
+            <mat-icon>add</mat-icon>
+            {{ isCreating ? "Création..." : "Créer la revue" }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Existing revue content -->
+    <ng-container
+      *ngIf="
+        !isLoadingRevue &&
+        hasSelectedRevueForCurrentPeriode &&
+        selectedRevue as revue
+      "
+    >
+      <!-- KPI row: 3 cards only -->
+      <section class="stats-grid stats-grid-three">
+        <article class="stat-card accent-line">
+          <div class="stat-content">
+            <p class="stat-label">Earned Value</p>
+
+            <h2 class="stat-value">
+              {{ formatPercent(revue.earnedValuePourcentage) }}
+            </h2>
+
+            <span class="stat-footer muted">
+              Avancement estimé par le chef de projet
+            </span>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>trending_up</mat-icon>
+          </div>
+        </article>
+
+        <article class="stat-card neutral-accent">
+          <div class="stat-content">
+            <p class="stat-label">Delivery</p>
+
+            <h2 class="stat-value">
+              {{ formatPercent(revue.snapshotDeliveryPourcentage) }}
+            </h2>
+
+            <span class="stat-footer muted"> Livrables livrés </span>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>task_alt</mat-icon>
+          </div>
+        </article>
+
+        <article
+          class="stat-card"
+          [class.danger-accent]="
+            isNegative(revue.snapshotMargeNetteActuelleTnd)
+          "
+          [class.success-accent]="
+            !isNegative(revue.snapshotMargeNetteActuelleTnd)
+          "
+        >
+          <div class="stat-content">
+            <p class="stat-label">Marge actuelle</p>
+
+            <h2
+              class="stat-value stat-value-money"
+              [class.negative-text]="
+                isNegative(revue.snapshotMargeNetteActuelleTnd)
+              "
+            >
+              {{ formatMoney(revue.snapshotMargeNetteActuelleTnd) }}
+            </h2>
+
+            <span
+              class="stat-footer"
+              [class.danger]="isNegative(revue.snapshotMargeNetteActuelleTnd)"
+              [class.positive]="
+                !isNegative(revue.snapshotMargeNetteActuelleTnd)
+              "
+            >
+              CA production - coût réel cumul
+            </span>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>
+              {{
+                isNegative(revue.snapshotMargeNetteActuelleTnd)
+                  ? "warning"
+                  : "check_circle"
+              }}
+            </mat-icon>
+          </div>
+        </article>
+      </section>
+
+      <!-- Main review grid -->
+      <div class="statistique-grid">
+        <!-- 01 Budget et dates -->
+        <section class="fiche-card accent-blue">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>event</mat-icon>
+            </span>
+
+            <h2>01 Budget et dates</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Montant affaire</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatMoney(revue.snapshotMontantAffaire) }} TND
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Date fin prévue</label>
+
+                <div class="readonly-value">
+                  {{ formatDate(revue.snapshotDateFinPrevue) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Montant honoraires</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatMoney(revue.snapshotMontantHonoraires) }} TND
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Date fin prévisionnelle</label>
+
+                <input
+                  class="editable-input"
+                  type="date"
+                  [(ngModel)]="revue.dateFinPrevisionnelle"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 02 Taux d'avancement -->
+        <section class="fiche-card accent-blue">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>stacked_line_chart</mat-icon>
+            </span>
+
+            <h2>02 Taux d’avancement global</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Consommation délais</label>
+
+                <div class="readonly-value">
+                  {{
+                    formatPercent(revue.snapshotConsommationDelaisPourcentage)
+                  }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Earned Value (%)</label>
+
+                <input
+                  class="editable-input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  [(ngModel)]="revue.earnedValuePourcentage"
+                />
+              </div>
+
+              <div class="field-box">
+                <label>Delivery</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatPercent(revue.snapshotDeliveryPourcentage) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Facturation</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatPercent(revue.snapshotFacturationPourcentage) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 03 Chiffre d'affaires -->
+        <section class="fiche-card accent-green">
+          <div class="card-header">
+            <span class="header-icon green">
+              <mat-icon>payments</mat-icon>
+            </span>
+
+            <h2>03 Chiffre d’affaires</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid three">
+              <div class="field-box">
+                <label>CA Production</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatMoney(revue.snapshotCaProductionTnd) }} TND
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>CA Facturé</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatMoney(revue.snapshotCaFactureTnd) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Stock</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatMoney(revue.snapshotStockTnd) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 04 Coûts -->
+        <section class="fiche-card accent-blue">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>request_quote</mat-icon>
+            </span>
+
+            <h2>04 Coûts</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid two">
+              <div class="field-box">
+                <label>Coût initial</label>
+
+                <div class="readonly-value">
+                  {{ formatMoney(revue.snapshotCoutInitial) }} TND
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Coût réel mois</label>
+
+                <div class="readonly-value">
+                  {{ formatMoney(revue.snapshotCoutReelMois) }} TND
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Coût réel cumul</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatMoney(revue.snapshotCoutReelCumul) }} TND
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>RAF ETC</label>
+
+                <div class="readonly-value">
+                  {{ formatMoney(revue.snapshotCoutPrevisionnelRafEtc) }} TND
+                </div>
+              </div>
+
+              <div class="field-box full-field">
+                <label>EAC coût prévisionnel total</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatMoney(revue.snapshotCoutPrevisionnelEac) }} TND
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 05 Marge nette -->
+        <section class="fiche-card accent-red">
+          <div class="card-header">
+            <span class="header-icon red">
+              <mat-icon>trending_up</mat-icon>
+            </span>
+
+            <h2>05 Marge nette</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="margin-list">
+              <div class="margin-row">
+                <span>Marge nette vendue</span>
+
+                <strong
+                  [class.negative-text]="
+                    isNegative(revue.snapshotMargeNetteVendueTnd)
+                  "
+                >
+                  {{ formatMoney(revue.snapshotMargeNetteVendueTnd) }} TND
+                </strong>
+
+                <small
+                  [class.negative-text]="
+                    isNegative(revue.snapshotMargeNetteVenduePourcentage)
+                  "
+                >
+                  {{ formatPercent(revue.snapshotMargeNetteVenduePourcentage) }}
+                </small>
+              </div>
+
+              <div class="margin-row">
+                <span>Marge nette actuelle</span>
+
+                <strong
+                  [class.negative-text]="
+                    isNegative(revue.snapshotMargeNetteActuelleTnd)
+                  "
+                >
+                  {{ formatMoney(revue.snapshotMargeNetteActuelleTnd) }} TND
+                </strong>
+
+                <small
+                  [class.negative-text]="
+                    isNegative(revue.snapshotMargeNetteActuellePourcentage)
+                  "
+                >
+                  {{
+                    formatPercent(revue.snapshotMargeNetteActuellePourcentage)
+                  }}
+                </small>
+              </div>
+
+              <div class="margin-row">
+                <span>Marge nette EAC</span>
+
+                <strong
+                  [class.negative-text]="
+                    isNegative(revue.snapshotMargeNetteEacTnd)
+                  "
+                >
+                  {{ formatMoney(revue.snapshotMargeNetteEacTnd) }} TND
+                </strong>
+
+                <small
+                  [class.negative-text]="
+                    isNegative(revue.snapshotMargeNetteEacPourcentage)
+                  "
+                >
+                  {{ formatPercent(revue.snapshotMargeNetteEacPourcentage) }}
+                </small>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 06 Charge Homme-Jour -->
+        <section class="fiche-card accent-blue">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>groups</mat-icon>
+            </span>
+
+            <h2>06 Charge Homme-Jour</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="fields-grid three">
+              <div class="field-box">
+                <label>Prévue globale</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatJh(revue.snapshotChargePrevueGlobaleJh) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Prévue mois</label>
+
+                <div class="readonly-value">
+                  {{ formatJh(revue.snapshotChargePrevueMoisJh) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Consommés mois</label>
+
+                <div class="readonly-value">
+                  {{ formatJh(revue.snapshotConsommeMoisJh) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Consommés cumul</label>
+
+                <div class="readonly-value calculated">
+                  {{ formatJh(revue.snapshotConsommeCumulJh) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>Reste à faire ETC</label>
+
+                <div class="readonly-value">
+                  {{ formatJh(revue.snapshotResteAFaireEtcJh) }}
+                </div>
+              </div>
+
+              <div class="field-box">
+                <label>EAC total</label>
+
+                <div class="readonly-value">
+                  {{ formatJh(revue.snapshotResteAFaireEacJh) }}
+                </div>
+              </div>
+
+              <div class="field-box full-field">
+                <label>Dérive</label>
+
+                <div
+                  class="readonly-value"
+                  [class.negative-value]="isNegative(revue.snapshotDeriveJh)"
+                >
+                  {{ formatJh(revue.snapshotDeriveJh) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 07 Observations -->
+        <section class="fiche-card accent-blue observations-card">
+          <div class="card-header">
+            <span class="header-icon blue">
+              <mat-icon>notes</mat-icon>
+            </span>
+
+            <h2>07 Faits marquants</h2>
+          </div>
+
+          <div class="card-body compact">
+            <div class="field-box">
+              <label>Observations et faits marquants</label>
+
+              <textarea
+                class="editable-textarea"
+                rows="5"
+                [(ngModel)]="revue.observationsFaitsMarquants"
+                placeholder="Saisir les observations et faits marquants du mois..."
+              ></textarea>
+            </div>
+          </div>
+        </section>
+      </div>
+    </ng-container>
+  </ng-container>
+
+  <!-- HISTORY TAB -->
+  <section
+    *ngIf="activeTab === 'history'"
+    class="fiche-card accent-blue history-card"
+  >
+    <div class="card-header history-header">
+      <span class="header-icon blue">
+        <mat-icon>history</mat-icon>
+      </span>
+
+      <div>
+        <h2>Historique des revues</h2>
+        <p>Consultez les revues mensuelles déjà créées pour ce projet.</p>
+      </div>
+
+      <button class="btn btn-secondary export-btn" type="button">
+        <mat-icon>download</mat-icon>
+        Exporter
+      </button>
+    </div>
+
+    <div
+      *ngIf="!isLoadingHistory && historyRevues.length === 0"
+      class="history-empty"
+    >
+      <mat-icon>history_toggle_off</mat-icon>
+      <p>Aucune revue mensuelle n’a encore été créée pour ce projet.</p>
+    </div>
+
+    <div *ngIf="historyRevues.length > 0" class="history-table-wrapper">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Période</th>
+            <th>Earned Value</th>
+            <th>Delivery</th>
+            <th>Coût réel cumul</th>
+            <th>Marge actuelle</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let revue of historyRevues; trackBy: trackByRevue">
+            <td>
+              <strong>{{ formatDate(revue.periode) }}</strong>
+            </td>
+
+            <td>{{ formatPercent(revue.earnedValuePourcentage) }}</td>
+
+            <td>{{ formatPercent(revue.snapshotDeliveryPourcentage) }}</td>
+
+            <td>{{ formatMoney(revue.snapshotCoutReelCumul) }} TND</td>
+
+            <td>
+              <span
+                [class.negative-text]="
+                  isNegative(revue.snapshotMargeNetteActuelleTnd)
+                "
+              >
+                {{ formatMoney(revue.snapshotMargeNetteActuelleTnd) }} TND
+              </span>
+            </td>
+
+            <td class="actions-col">
+              <div class="actions-cell">
+                <button
+                  mat-icon-button
+                  class="action-icon"
+                  type="button"
+                  (click)="viewRevue(revue)"
+                >
+                  <mat-icon>visibility</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  class="action-icon"
+                  type="button"
+                  (click)="viewRevue(revue)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

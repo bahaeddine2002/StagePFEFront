@@ -20,17 +20,18 @@ export const PROJECT_NAV_ITEMS: ProjectNavItem[] = [
     icon: "description",
     permission: PERMISSIONS.PROJETS_FICHE_IDENTIFICATION,
   },
+
+  {
+    label: "DI",
+    routeSuffix: "di",
+    icon: "receipt_long",
+    permission: PERMISSIONS.PROJETS_DI,
+  },
   {
     label: "Livrables",
     routeSuffix: "livrables",
     icon: "assignment",
     permission: PERMISSIONS.PROJETS_LIVRABLES,
-  },
-  {
-    label: "Coût actualisé",
-    routeSuffix: "cout-actualise",
-    icon: "payments",
-    permission: PERMISSIONS.PROJETS_COUT_ACTUALISE,
   },
   {
     label: "Coût prévisionnel",
@@ -39,17 +40,12 @@ export const PROJECT_NAV_ITEMS: ProjectNavItem[] = [
     permission: PERMISSIONS.PROJETS_COUT_PREVISIONNEL,
   },
   {
-    label: "DI",
-    routeSuffix: "di",
-    icon: "receipt_long",
-    permission: PERMISSIONS.PROJETS_DI,
+    label: "Coût actualisé",
+    routeSuffix: "cout-actualise",
+    icon: "payments",
+    permission: PERMISSIONS.PROJETS_COUT_ACTUALISE,
   },
-  {
-    label: "TCC",
-    routeSuffix: "tcc",
-    icon: "analytics",
-    permission: PERMISSIONS.PROJETS_TCC,
-  },
+
   {
     label: "Facturation",
     routeSuffix: "facturation",

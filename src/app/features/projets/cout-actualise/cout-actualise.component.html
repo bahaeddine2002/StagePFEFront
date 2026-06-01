@@ -1,0 +1,459 @@
+<div class="fiche-page">
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="state-card">
+    <mat-icon>hourglass_empty</mat-icon>
+    Chargement du coût actualisé...
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage && !isLoading" class="state-card error">
+    <mat-icon>error_outline</mat-icon>
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!isLoading && !errorMessage">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <span>Projets</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span>Liste des projets</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span class="active">Coût actualisé</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="title-line">
+          <h1>Coût actualisé du projet</h1>
+
+          <span class="badge badge-status">
+            <span class="status-dot"></span>
+            Actualisé
+          </span>
+        </div>
+
+        <p class="page-subtitle">
+          Saisissez les charges actualisées des ressources et suivez les coûts
+          réels ou actualisés du projet.
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary" type="button" (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour
+        </button>
+
+        <button class="btn btn-secondary" type="button" (click)="exportExcel()">
+          <mat-icon>download</mat-icon>
+          Exporter Excel
+        </button>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="!isDirty || isSaving || hasNoResources"
+          (click)="save()"
+        >
+          <mat-icon>{{ isSaving ? "hourglass_empty" : "save" }}</mat-icon>
+          {{ isSaving ? "Enregistrement..." : "Enregistrer" }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <section class="empty-di-card" *ngIf="hasNoResources">
+      <div class="empty-icon">
+        <mat-icon>groups</mat-icon>
+      </div>
+
+      <h2>Aucune ressource actualisée</h2>
+
+      <p>
+        Le coût actualisé est basé sur les ressources retenues dans le Devis
+        Interne. Ajoutez au moins une ressource dans la DI pour afficher le
+        tableau actualisé.
+      </p>
+
+      <div class="empty-actions">
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="goToDevisInterne()"
+        >
+          <mat-icon>assignment</mat-icon>
+          Aller au Devis Interne
+        </button>
+
+        <button class="btn btn-secondary" type="button" (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour à la liste des projets
+        </button>
+      </div>
+    </section>
+
+    <ng-container *ngIf="!hasNoResources">
+      <!-- Stats: GLOBAL PROJECT TOTALS -->
+      <section class="stats-grid">
+        <article class="stat-card accent-line">
+          <div class="stat-content">
+            <p class="stat-label">Ressources actualisées</p>
+            <h2 class="stat-value">{{ totalResourcesPlanifiees }}</h2>
+            <div class="stat-footer muted">
+              <span>Ressources issues de la DI</span>
+            </div>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>groups</mat-icon>
+          </div>
+        </article>
+
+        <article class="stat-card accent-line neutral-accent">
+          <div class="stat-content">
+            <p class="stat-label">Total jours actualisés</p>
+            <h2 class="stat-value">
+              {{ formatNumber(totalJoursActualisesGlobal) }} j
+            </h2>
+            <div class="stat-footer muted">
+              <span>Total projet, toutes années confondues</span>
+            </div>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>event_available</mat-icon>
+          </div>
+        </article>
+
+        <article class="stat-card success-accent">
+          <div class="stat-content">
+            <p class="stat-label">Coût actualisé global</p>
+            <h2 class="stat-value stat-value-money">
+              {{ formatMoney(totalCoutActualiseGlobal) }} {{ devise }}
+            </h2>
+            <div class="stat-footer positive">
+              <mat-icon>check_circle</mat-icon>
+              <span>
+                {{ formatNumber(budgetConsommePercent) }}% du budget global
+              </span>
+            </div>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>paid</mat-icon>
+          </div>
+        </article>
+      </section>
+
+      <!-- Tabs -->
+      <section class="tcc-tabs-card">
+        <button
+          type="button"
+          class="tcc-tab"
+          [class.active]="activeTab === 'PLAN_CHARGE'"
+          (click)="setActiveTab('PLAN_CHARGE')"
+        >
+          <mat-icon>table_chart</mat-icon>
+          Charge actualisée
+        </button>
+
+        <button
+          type="button"
+          class="tcc-tab"
+          [class.active]="activeTab === 'COUTS_CALCULES'"
+          (click)="setActiveTab('COUTS_CALCULES')"
+        >
+          <mat-icon>calculate</mat-icon>
+          Coûts calculés
+        </button>
+      </section>
+
+      <!-- Toolbar -->
+      <section class="toolbar-card">
+        <div class="toolbar-left">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Année</mat-label>
+            <mat-select
+              [value]="selectedYear"
+              (selectionChange)="onYearChange($event.value)"
+            >
+              <mat-option *ngFor="let year of availableYears" [value]="year">
+                {{ year }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field
+            appearance="outline"
+            class="filter-field resource-field"
+          >
+            <mat-label>Ressource</mat-label>
+            <mat-select
+              [value]="selectedResource"
+              (selectionChange)="onResourceChange($event.value)"
+            >
+              <mat-option value="ALL">Toutes les ressources</mat-option>
+
+              <mat-option
+                *ngFor="let resource of resources; trackBy: trackByResourceId"
+                [value]="resource.ligneDevisInterneId.toString()"
+              >
+                {{ resource.nomComplet || "Ressource sans nom" }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="toolbar-right">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Rechercher une ressource</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input
+              matInput
+              type="text"
+              [value]="searchTerm"
+              (input)="onSearchChange($any($event.target).value)"
+              placeholder="Nom, matricule ou désignation..."
+            />
+          </mat-form-field>
+
+          <button type="button" class="btn-reset" (click)="resetFilters()">
+            Réinitialiser
+          </button>
+        </div>
+      </section>
+
+      <!-- Info banner for calculated tab -->
+      <section class="info-banner" *ngIf="activeTab === 'COUTS_CALCULES'">
+        <mat-icon>info</mat-icon>
+        <div>
+          <strong>Lecture seule</strong>
+          <span>
+            Ces coûts sont calculés automatiquement à partir des jours
+            actualisés et du TJM de chaque ressource.
+          </span>
+        </div>
+      </section>
+
+      <!-- Table card -->
+      <section class="table-card">
+        <div class="table-card-header">
+          <div>
+            <h2>
+              {{
+                activeTab === "PLAN_CHARGE"
+                  ? "Charge actualisée mensuelle"
+                  : "Coûts actualisés calculés"
+              }}
+            </h2>
+
+            <p>
+              {{
+                activeTab === "PLAN_CHARGE"
+                  ? "Saisissez les jours actualisés par ressource et par mois. Le total du tableau concerne uniquement l’année sélectionnée."
+                  : "Lecture seule. Le total du tableau concerne uniquement l’année sélectionnée."
+              }}
+            </p>
+          </div>
+
+          <span
+            class="readonly-badge"
+            [class.editable-badge]="activeTab === 'PLAN_CHARGE'"
+          >
+            <mat-icon>
+              {{ activeTab === "PLAN_CHARGE" ? "edit" : "lock" }}
+            </mat-icon>
+            {{
+              activeTab === "PLAN_CHARGE" ? "Saisie active" : "Lecture seule"
+            }}
+          </span>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="planning-table">
+            <thead>
+              <tr>
+                <th class="resource-col sticky-resource">RESSOURCE</th>
+
+                <th
+                  class="month-col"
+                  *ngFor="let month of months; trackBy: trackByMonthKey"
+                >
+                  {{ month.label }}
+                </th>
+
+                <th class="total-col">
+                  {{
+                    activeTab === "PLAN_CHARGE"
+                      ? "TOTAL ANNÉE"
+                      : "TOTAL COÛT ANNÉE"
+                  }}
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr *ngIf="filteredResources.length === 0">
+                <td [attr.colspan]="months.length + 2">
+                  <div class="empty-state">
+                    <mat-icon>search_off</mat-icon>
+                    <p>Aucune ressource ne correspond aux filtres.</p>
+                  </div>
+                </td>
+              </tr>
+
+              <tr
+                class="planning-row"
+                *ngFor="
+                  let resource of filteredResources;
+                  trackBy: trackByResourceId
+                "
+              >
+                <td class="resource-col sticky-resource">
+                  <div class="role-cell">
+                    <div class="role-icon-box">
+                      <mat-icon>person</mat-icon>
+                    </div>
+
+                    <div class="role-text">
+                      <div class="role-name">
+                        {{ resource.nomComplet || "Ressource sans nom" }}
+                      </div>
+
+                      <div class="role-module">
+                        <ng-container *ngIf="activeTab === 'PLAN_CHARGE'">
+                          {{ resource.designation || "Aucune désignation" }}
+                          <span *ngIf="resource.matricule">
+                            · {{ resource.matricule }}
+                          </span>
+                        </ng-container>
+
+                        <ng-container *ngIf="activeTab === 'COUTS_CALCULES'">
+                          {{ resource.designation || "Aucune désignation" }}
+                          · TJM :
+                          {{ formatMoney(resource.tjm) }} {{ devise }} / H-Jour
+                        </ng-container>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                <td
+                  class="month-col"
+                  *ngFor="let month of months; trackBy: trackByMonthKey"
+                >
+                  <ng-container
+                    *ngIf="activeTab === 'PLAN_CHARGE'; else costCell"
+                  >
+                    <input
+                      class="inline-days-input"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      [value]="resource.jours[month.key] ?? ''"
+                      placeholder="—"
+                      (input)="updateDays(resource, month.key, $event)"
+                    />
+                  </ng-container>
+
+                  <ng-template #costCell>
+                    <ng-container
+                      *ngIf="hasMonthValue(resource, month.key); else emptyCost"
+                    >
+                      <span class="cost-value">
+                        {{ formatMoney(getMonthCost(resource, month.key)) }}
+                      </span>
+                      <span class="cost-currency">{{ devise }}</span>
+                    </ng-container>
+
+                    <ng-template #emptyCost>
+                      <span class="empty-value">—</span>
+                    </ng-template>
+                  </ng-template>
+                </td>
+
+                <td class="total-col">
+                  <span class="total-chip">
+                    {{
+                      activeTab === "PLAN_CHARGE"
+                        ? formatNumber(getResourceTotalDays(resource)) + " j"
+                        : formatMoney(getResourceTotalCost(resource)) +
+                          " " +
+                          devise
+                    }}
+                  </span>
+                </td>
+              </tr>
+
+              <tr class="summary-row" *ngIf="filteredResources.length > 0">
+                <td class="resource-col sticky-resource summary-label">
+                  Total {{ selectedYearLabel }}
+                </td>
+
+                <td
+                  class="month-col summary-cell"
+                  *ngFor="let month of months; trackBy: trackByMonthKey"
+                >
+                  {{
+                    activeTab === "PLAN_CHARGE"
+                      ? formatNumber(getMonthTotalDays(month.key))
+                      : formatMoney(getMonthTotalCost(month.key))
+                  }}
+                </td>
+
+                <td class="total-col summary-cell total-summary">
+                  {{
+                    activeTab === "PLAN_CHARGE"
+                      ? formatNumber(totalJoursActualisesAnnee) + " j"
+                      : formatMoney(totalCoutActualiseAnnee) + " " + devise
+                  }}
+                </td>
+              </tr>
+
+              <tr class="cumul-row" *ngIf="filteredResources.length > 0">
+                <td class="resource-col sticky-resource cumul-label">
+                  {{
+                    activeTab === "PLAN_CHARGE"
+                      ? "Cumul jours restant " + selectedYearLabel
+                      : "Cumul coût restant " + selectedYearLabel
+                  }}
+                </td>
+
+                <td
+                  class="month-col cumul-cell"
+                  *ngFor="
+                    let month of months;
+                    let monthIndex = index;
+                    trackBy: trackByMonthKey
+                  "
+                >
+                  {{
+                    activeTab === "PLAN_CHARGE"
+                      ? formatNumber(getCumulDaysRemaining(monthIndex))
+                      : formatMoney(getCumulCostRemaining(monthIndex))
+                  }}
+                </td>
+
+                <td class="total-col cumul-cell">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <div class="table-results">
+            {{ filteredResources.length }} ressource(s) affichée(s) · Année
+            {{ selectedYearLabel }}
+          </div>
+
+          <div class="scroll-hint">
+            <mat-icon>info</mat-icon>
+            Les cartes affichent le total global du projet. Le tableau affiche
+            uniquement l’année sélectionnée.
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </ng-container>
+</div>

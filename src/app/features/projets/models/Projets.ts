@@ -1,11 +1,11 @@
 export interface ProjetCreateRequest {
   codeProjet: string;
   contractId?: string | null;
-  client: string;
-  partenaire?: string | null;
+  clientId: number;
+  partenaireId?: number | null;
+  bailleurDeFondsId?: number | null;
   nomProjet: string;
   descriptionProjet?: string | null;
-  bailleurDeFonds?: string | null;
 
   businessModelId: number;
   typeEngagementId: number;
@@ -35,11 +35,11 @@ export interface ProjetCreateRequest {
 export interface ProjetUpdateRequest {
   codeProjet: string;
   contractId?: string | null;
-  client: string;
-  partenaire?: string | null;
+  clientId: number;
+  partenaireId?: number | null;
+  bailleurDeFondsId?: number | null;
   nomProjet: string;
   descriptionProjet?: string | null;
-  bailleurDeFonds?: string | null;
 
   businessModelId: number;
   typeEngagementId: number;
@@ -69,11 +69,11 @@ export interface ProjetUpdateRequest {
 export interface ProjetFormValue {
   codeProjet: string;
   contractId: string | null;
-  client: string;
-  partenaire: string | null;
+  clientId: number;
+  partenaireId?: number | null;
+  bailleurDeFondsId?: number | null;
   nomProjet: string;
   descriptionProjet: string | null;
-  bailleurDeFonds: string | null;
 
   businessModelId: number | null;
   typeEngagementId: number | null;
@@ -104,11 +104,22 @@ export interface ProjetResponse {
   id: number;
   codeProjet: string;
   contractId: string | null;
-  client: string;
-  partenaire: string | null;
+  clientId: number | null;
+  clientNom: string | null;
+  clientNomCourt: string | null;
+  clientDisplayName: string | null;
+
+  partenaireId: number | null;
+  partenaireNom: string | null;
+  partenaireNomCourt: string | null;
+  partenaireDisplayName: string | null;
+
+  bailleurDeFondsId: number | null;
+  bailleurDeFondsNom: string | null;
+  bailleurDeFondsNomCourt: string | null;
+  bailleurDeFondsDisplayName: string | null;
   nomProjet: string;
   descriptionProjet: string | null;
-  bailleurDeFonds: string | null;
 
   businessModelId: number;
   typeEngagementId: number;
@@ -141,11 +152,22 @@ export interface ProjetDetailResponse {
 
   codeProjet: string;
   contractId: string | null;
-  client: string | null;
-  partenaire: string | null;
+  clientId: number | null;
+  clientNom: string | null;
+  clientNomCourt: string | null;
+  clientDisplayName: string | null;
+
+  partenaireId: number | null;
+  partenaireNom: string | null;
+  partenaireNomCourt: string | null;
+  partenaireDisplayName: string | null;
+
+  bailleurDeFondsId: number | null;
+  bailleurDeFondsNom: string | null;
+  bailleurDeFondsNomCourt: string | null;
+  bailleurDeFondsDisplayName: string | null;
   nomProjet: string;
   descriptionProjet: string | null;
-  bailleurDeFonds: string | null;
 
   projectManagerId: number | null;
   projectManagerNomComplet: string | null;

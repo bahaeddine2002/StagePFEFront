@@ -14,6 +14,7 @@ export class LoginComponent {
   hidePassword = true;
   isSubmitting = false;
   submitAttempted = false;
+  loginErrorMessage: string | null = null;
 
   loginForm = new FormGroup({
     email: new FormControl("", {
@@ -59,10 +60,23 @@ export class LoginComponent {
           this.router.navigate(["/dashboard"]);
         },
         error: (error) => {
-          this.toastService.error(
-            error?.error?.message || "Email ou mot de passe invalide.",
-          );
+          const message = this.extractLoginErrorMessage(error);
+
+          this.loginErrorMessage = message;
+          this.toastService.error(message);
         },
       });
+  }
+  private extractLoginErrorMessage(error: any): string {
+    if (error?.status === 401 || error?.status === 403) {
+      return "Email ou mot de passe invalide.";
+    }
+
+    return (
+      error?.error?.message ||
+      error?.error?.error ||
+      error?.message ||
+      "Échec de connexion. Veuillez réessayer."
+    );
   }
 }

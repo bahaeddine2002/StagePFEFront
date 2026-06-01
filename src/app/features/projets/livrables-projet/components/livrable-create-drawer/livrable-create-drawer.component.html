@@ -1,0 +1,96 @@
+<div class="drawer-overlay" (click)="close()"></div>
+
+<aside class="di-drawer">
+  <header class="drawer-header">
+    <div>
+      <div class="drawer-title-row">
+        <h2>Ajouter un livrable</h2>
+
+        <span class="drawer-status">Création</span>
+      </div>
+
+      <p>
+        Renseignez la désignation du livrable et sa date de livraison prévue.
+      </p>
+    </div>
+
+    <button
+      mat-icon-button
+      class="drawer-close"
+      type="button"
+      (click)="close()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="drawer-body">
+      <article class="drawer-card">
+        <div class="drawer-card-title blue-title">
+          <span>01</span>
+          <h3>Informations du livrable</h3>
+        </div>
+
+        <div class="drawer-grid single-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Désignation livrable</mat-label>
+            <input
+              matInput
+              formControlName="designation"
+              placeholder="Ex: Spécifications fonctionnelles"
+            />
+
+            <mat-error *ngIf="form.get('designation')?.hasError('required')">
+              La désignation est obligatoire.
+            </mat-error>
+
+            <mat-error *ngIf="form.get('designation')?.hasError('maxlength')">
+              La désignation ne doit pas dépasser 500 caractères.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Date de livraison prévue</mat-label>
+            <input matInput type="date" formControlName="dateLivraisonPrevue" />
+
+            <mat-error
+              *ngIf="form.get('dateLivraisonPrevue')?.hasError('required')"
+            >
+              La date de livraison prévue est obligatoire.
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </article>
+
+      <section class="drawer-info">
+        <mat-icon>info</mat-icon>
+        <span>
+          Le numéro du livrable est généré automatiquement. Le suivi
+          Réalisé/Livré sera modifiable directement dans le tableau.
+        </span>
+      </section>
+    </div>
+
+    <footer class="drawer-footer">
+      <button
+        mat-stroked-button
+        class="btn-secondary"
+        type="button"
+        (click)="close()"
+      >
+        Annuler
+      </button>
+
+      <button
+        mat-flat-button
+        class="btn-primary"
+        type="submit"
+        [disabled]="!canSave"
+      >
+        <mat-icon>{{ isSaving ? "hourglass_empty" : "save" }}</mat-icon>
+        {{ isSaving ? "Enregistrement..." : "Créer le livrable" }}
+      </button>
+    </footer>
+  </form>
+</aside>

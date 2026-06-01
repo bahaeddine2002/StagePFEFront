@@ -1,0 +1,26 @@
+<div class="dashboard-page">
+  <div class="dashboard-header">
+    <div>
+      <h1>Tableau de bord projet</h1>
+      <p>
+        Visualisation des indicateurs de revue mensuelle du projet sélectionné.
+      </p>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="state-card">
+    Chargement du tableau de bord...
+  </div>
+
+  <div *ngIf="errorMessage" class="state-card error">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="token && !isLoading && !errorMessage" class="metabase-wrapper">
+    <metabase-dashboard
+      [attr.token]="token"
+      with-title="false"
+      with-downloads="false"
+    ></metabase-dashboard>
+  </div>
+</div>

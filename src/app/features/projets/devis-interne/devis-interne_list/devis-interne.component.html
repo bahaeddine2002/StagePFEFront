@@ -301,6 +301,7 @@
                   <button
                     mat-icon-button
                     color="warn"
+                    [disabled]="isDeletingLineId === line.id"
                     (click)="deleteLine(line)"
                   >
                     <mat-icon>delete</mat-icon>

@@ -1,0 +1,320 @@
+<div class="fiche-page">
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="state-card">
+    <mat-icon>hourglass_empty</mat-icon>
+    Chargement des livrables du projet...
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="errorMessage && !isLoading" class="state-card error">
+    <mat-icon>error_outline</mat-icon>
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="!isLoading && !errorMessage">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <span>Projets</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span>Liste des projets</span>
+      <mat-icon>chevron_right</mat-icon>
+      <span class="active">Livrables</span>
+    </div>
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="title-line">
+          <h1>Livrables du projet</h1>
+
+          <span class="badge badge-status">
+            <span class="status-dot"></span>
+            Suivi projet
+          </span>
+        </div>
+
+        <p class="page-subtitle">
+          Suivez les livrables attendus, leurs dates prévues, leur réalisation
+          et leur livraison effective.
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary" type="button" (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour
+        </button>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="openCreateDrawer()"
+        >
+          <mat-icon>add</mat-icon>
+          Ajouter un livrable
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <section class="empty-di-card" *ngIf="hasNoLivrables">
+      <div class="empty-icon">
+        <mat-icon>inventory_2</mat-icon>
+      </div>
+
+      <h2>Aucun livrable ajouté</h2>
+
+      <p>
+        Commencez par créer les livrables attendus pour ce projet. Le système
+        calculera automatiquement le nombre total de livrables et le taux de
+        delivery global.
+      </p>
+
+      <div class="empty-actions">
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="openCreateDrawer()"
+        >
+          <mat-icon>add</mat-icon>
+          Ajouter le premier livrable
+        </button>
+
+        <button class="btn btn-secondary" type="button" (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+          Retour à la liste des projets
+        </button>
+      </div>
+    </section>
+
+    <ng-container *ngIf="!hasNoLivrables">
+      <!-- Stats -->
+      <section class="stats-grid">
+        <article class="stat-card accent-line">
+          <div class="stat-content">
+            <p class="stat-label">Total livrables</p>
+            <h2 class="stat-value">{{ totalLivrables }}</h2>
+            <div class="stat-footer muted">
+              <span>Livrables planifiés</span>
+            </div>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>inventory_2</mat-icon>
+          </div>
+        </article>
+
+        <article class="stat-card neutral-accent">
+          <div class="stat-content">
+            <p class="stat-label">Réalisés</p>
+            <h2 class="stat-value">{{ livrablesRealises }}</h2>
+            <div class="stat-footer muted">
+              <span>Marqués comme réalisés</span>
+            </div>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>task_alt</mat-icon>
+          </div>
+        </article>
+
+        <article class="stat-card success-accent">
+          <div class="stat-content">
+            <p class="stat-label">Progression livraison</p>
+            <h2 class="stat-value stat-value-percent">
+              {{ formatNumber(progressionGlobale) }}%
+            </h2>
+            <div class="stat-footer positive">
+              <mat-icon>check_circle</mat-icon>
+              <span>{{ livrablesLivres }} livré(s)</span>
+            </div>
+          </div>
+
+          <div class="stat-visual">
+            <mat-icon>verified</mat-icon>
+          </div>
+        </article>
+      </section>
+
+      <!-- Info banner -->
+      <section class="info-banner">
+        <mat-icon>info</mat-icon>
+        <div>
+          <strong>Règle de suivi</strong>
+          <span>
+            Si un livrable n’est pas réalisé, il ne peut pas être livré. Si un
+            livrable est marqué comme livré, il est automatiquement considéré
+            comme réalisé et une date réelle est renseignée.
+          </span>
+        </div>
+      </section>
+
+      <!-- Table card -->
+      <section class="table-card">
+        <div class="table-card-header">
+          <div>
+            <h2>Liste des livrables</h2>
+
+            <p>
+              Les numéros sont générés automatiquement selon l’ordre de création
+              des livrables du projet.
+            </p>
+          </div>
+
+          <span class="readonly-badge editable-badge">
+            <mat-icon>edit</mat-icon>
+            Saisie active
+          </span>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="livrables-table">
+            <thead>
+              <tr>
+                <th class="numero-col">N°</th>
+                <th class="designation-col">Désignation livrable</th>
+                <th class="date-col">Date prévue</th>
+                <th class="status-col">Réalisé</th>
+                <th class="status-col">Livré</th>
+                <th class="date-real-col">Date réelle</th>
+                <th class="delivery-col">Delivery</th>
+                <th class="ecart-col">Écart</th>
+                <th class="actions-col">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr
+                class="livrable-row"
+                *ngFor="let livrable of livrables; trackBy: trackByLivrableId"
+                [class.row-updating]="isUpdating(livrable.id)"
+              >
+                <td class="numero-col">
+                  <span class="numero-chip">{{ livrable.numero }}</span>
+                </td>
+
+                <td class="designation-col">
+                  <div class="livrable-cell">
+                    <div class="livrable-icon-box">
+                      <mat-icon>description</mat-icon>
+                    </div>
+
+                    <div class="livrable-text">
+                      <div class="livrable-name">
+                        {{ livrable.designation }}
+                      </div>
+
+                      <div class="livrable-meta">
+                        Créé pour le projet #{{ livrable.projetId }}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="date-col">
+                  {{ formatDate(livrable.dateLivraisonPrevue) }}
+                </td>
+
+                <!-- Réalisé -->
+                <td class="status-col">
+                  <mat-select
+                    class="inline-select"
+                    [value]="livrable.realise"
+                    [disabled]="isUpdating(livrable.id)"
+                    (selectionChange)="updateRealise(livrable, $event.value)"
+                  >
+                    <mat-option [value]="true">Oui</mat-option>
+                    <mat-option [value]="false">Non</mat-option>
+                  </mat-select>
+                </td>
+
+                <!-- Livré -->
+                <td class="status-col">
+                  <mat-select
+                    class="inline-select"
+                    [value]="livrable.livre"
+                    [disabled]="!livrable.realise || isUpdating(livrable.id)"
+                    (selectionChange)="updateLivre(livrable, $event.value)"
+                  >
+                    <mat-option [value]="true">Oui</mat-option>
+                    <mat-option [value]="false">Non</mat-option>
+                  </mat-select>
+                </td>
+
+                <!-- Date réelle -->
+                <td class="date-real-col">
+                  <input
+                    class="inline-date-input"
+                    type="date"
+                    [value]="livrable.dateLivraisonReelle || ''"
+                    [disabled]="!livrable.livre || isUpdating(livrable.id)"
+                    (change)="
+                      updateDateReelle(livrable, $any($event.target).value)
+                    "
+                  />
+                </td>
+
+                <!-- Delivery -->
+                <td class="delivery-col">
+                  <span class="delivery-chip" [class.done]="livrable.livre">
+                    {{ formatNumber(livrable.deliveryPourcentage) }}%
+                  </span>
+                </td>
+
+                <!-- Écart -->
+                <td class="ecart-col">
+                  <span
+                    class="ecart-chip"
+                    [class.positive]="
+                      getEcartClass(livrable.ecartJours) === 'positive'
+                    "
+                    [class.negative]="
+                      getEcartClass(livrable.ecartJours) === 'negative'
+                    "
+                    [class.neutral]="
+                      getEcartClass(livrable.ecartJours) === 'neutral'
+                    "
+                  >
+                    {{ formatEcart(livrable.ecartJours) }}
+                  </span>
+                </td>
+
+                <!-- Actions -->
+                <td class="actions-col">
+                  <button
+                    mat-icon-button
+                    class="delete-btn"
+                    type="button"
+                    matTooltip="Supprimer le livrable"
+                    [disabled]="isUpdating(livrable.id)"
+                    (click)="deleteLivrable(livrable)"
+                  >
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <div class="table-results">
+            {{ livrables.length }} livrable(s) affiché(s)
+          </div>
+
+          <div class="scroll-hint">
+            <mat-icon>info</mat-icon>
+            Les modifications du suivi sont enregistrées automatiquement.
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </ng-container>
+
+  <app-livrable-create-drawer
+    *ngIf="isCreateDrawerOpen"
+    [isSaving]="isSaving"
+    (closed)="closeCreateDrawer()"
+    (saved)="onLivrableCreated($event)"
+  ></app-livrable-create-drawer>
+</div>

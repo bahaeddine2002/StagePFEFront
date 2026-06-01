@@ -10,6 +10,7 @@ import { CoreModule } from "src/app/core/core.module";
 import { ReactiveFormsModule } from "@angular/forms";
 import { MatChipsModule } from "@angular/material/chips";
 import { TccReferentielComponent } from "./tcc/tcc-referentiel/tcc-referentiel.component";
+import { OrganisationsListComponent } from "./organisations/organisations-list/organisations-list.component";
 
 @NgModule({
   declarations: [
@@ -18,6 +19,7 @@ import { TccReferentielComponent } from "./tcc/tcc-referentiel/tcc-referentiel.c
     RoleCreateComponent,
     UserCreateComponent,
     TccReferentielComponent,
+    OrganisationsListComponent,
   ],
   imports: [
     CommonModule,

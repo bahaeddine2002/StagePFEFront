@@ -6,6 +6,7 @@ import { RolesComponent } from "./roles/roles.component";
 import { UsersComponent } from "./users/users.component";
 import { RoleCreateComponent } from "./role-create/role-create.component";
 import { TccReferentielComponent } from "./tcc/tcc-referentiel/tcc-referentiel.component";
+import { OrganisationsListComponent } from "./organisations/organisations-list/organisations-list.component";
 
 const routes: Routes = [
   {
@@ -19,6 +20,10 @@ const routes: Routes = [
       {
         path: "tcc",
         component: TccReferentielComponent,
+      },
+      {
+        path: "organisations",
+        component: OrganisationsListComponent,
       },
     ],
   },

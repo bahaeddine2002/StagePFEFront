@@ -1,0 +1,375 @@
+<div class="page-container">
+  <nav class="breadcrumb">
+    <span>Projets</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span>Liste des projets</span>
+    <mat-icon>chevron_right</mat-icon>
+    <span class="active">Facturation</span>
+  </nav>
+
+  <header class="page-header">
+    <div class="page-header-text">
+      <div class="page-title-row">
+        <h1 class="page-title">Facturation du projet</h1>
+
+        <span class="project-code-chip" *ngIf="facturation">
+          Projet #{{ facturation.projetId }}
+        </span>
+      </div>
+
+      <p class="page-subtitle">
+        Suivi des échéances de facturation, des paiements et du reste à facturer
+        du projet.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button mat-stroked-button class="btn-secondary" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Retour
+      </button>
+
+      <button
+        mat-flat-button
+        class="btn-primary"
+        [disabled]="isLoading || !facturation"
+        (click)="openAddDrawer()"
+      >
+        <mat-icon>add_circle_outline</mat-icon>
+        Ajouter une échéance
+      </button>
+    </div>
+  </header>
+
+  <section class="loading-state" *ngIf="isLoading">
+    <mat-spinner diameter="42"></mat-spinner>
+    <p>Chargement de la facturation...</p>
+  </section>
+
+  <ng-container *ngIf="!isLoading && facturation">
+    <section class="stats-grid">
+      <article class="stat-card accent-line">
+        <div class="stat-content">
+          <p class="stat-label">Base facturation</p>
+
+          <h2 class="stat-value stat-money">
+            {{ formatMoney(facturation.baseFacturation) }}
+            <span>{{ facturation.deviseCode || "TND" }}</span>
+          </h2>
+
+          <div *ngIf="!isProjectCurrencyTnd()" class="stat-footer muted">
+            <span>
+              ≈ {{ formatMoney(facturation.baseFacturationTnd) }} TND
+            </span>
+          </div>
+        </div>
+
+        <div class="stat-visual">
+          <mat-icon>request_quote</mat-icon>
+        </div>
+      </article>
+
+      <article class="stat-card neutral-accent">
+        <div class="stat-content">
+          <p class="stat-label">Planification</p>
+
+          <h2 class="stat-value stat-percent neutral-percent">
+            {{ formatPercent(facturation.totalPourcentagePlanifie) }}%
+          </h2>
+
+          <div class="stat-footer muted">
+            <span>
+              Reste planifiable :
+              {{ formatPercent(facturation.pourcentageRestantPlanifiable) }}%
+            </span>
+          </div>
+        </div>
+
+        <div class="stat-visual">
+          <mat-icon>event_note</mat-icon>
+        </div>
+      </article>
+
+      <article class="stat-card success-accent">
+        <div class="stat-content">
+          <p class="stat-label">Facturé</p>
+
+          <h2 class="stat-value stat-percent">
+            {{ formatPercent(facturation.pourcentageFacture) }}%
+          </h2>
+
+          <div class="stat-footer muted">
+            <span>
+              Reste à facturer :
+              {{ formatPercent(facturation.pourcentageRestantAFacturer) }}%
+            </span>
+          </div>
+        </div>
+
+        <div class="stat-visual">
+          <mat-icon>paid</mat-icon>
+        </div>
+      </article>
+    </section>
+
+    <section
+      class="warning-card"
+      *ngIf="facturation.pourcentageRestantPlanifiable === 0"
+    >
+      <mat-icon>info</mat-icon>
+      <span>
+        La planification atteint 100%. Vous ne pouvez plus ajouter de nouvelle
+        échéance sans modifier les pourcentages existants.
+      </span>
+    </section>
+
+    <section class="toolbar-card facturation-toolbar">
+      <div class="toolbar-left">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher une échéance</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            type="text"
+            [(ngModel)]="searchTerm"
+            placeholder="Description, évènement ou référence..."
+          />
+        </mat-form-field>
+      </div>
+
+      <div class="toolbar-right">
+        <button mat-stroked-button class="btn-secondary">
+          <mat-icon>download</mat-icon>
+          Exporter
+        </button>
+
+        <button
+          mat-flat-button
+          class="btn-primary"
+          [disabled]="facturation.pourcentageRestantPlanifiable === 0"
+          (click)="openAddDrawer()"
+        >
+          <mat-icon>add_circle_outline</mat-icon>
+          Ajouter une échéance
+        </button>
+      </div>
+    </section>
+
+    <section class="table-card">
+      <div class="table-wrapper">
+        <table class="roles-table facturation-table">
+          <thead>
+            <tr>
+              <th>ÉCHÉANCE</th>
+              <th>MONTANT</th>
+              <th>CUMUL</th>
+              <th>PAIEMENT</th>
+              <th>DATES</th>
+              <th class="actions-col">ACTIONS</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngIf="!hasEcheances">
+              <td colspan="6">
+                <div class="empty-table-state">
+                  <mat-icon>receipt_long</mat-icon>
+                  <strong>Aucune échéance de facturation ajoutée</strong>
+                  <button mat-button color="primary" (click)="openAddDrawer()">
+                    Cliquez ici pour ajouter la première échéance
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr
+              *ngFor="
+                let echeance of filteredEcheances;
+                trackBy: trackByEcheanceId
+              "
+            >
+              <td>
+                <div class="role-text compact-text">
+                  <div class="role-name">
+                    Échéance {{ echeance.ordre }} · {{ echeance.description }}
+                  </div>
+
+                  <div class="role-module">
+                    {{ echeance.evenement }}
+                  </div>
+
+                  <div class="inline-meta">
+                    <span>{{ formatPercent(echeance.pourcentage) }}%</span>
+
+                    <span *ngIf="echeance.referenceFacture">
+                      Réf. {{ echeance.referenceFacture }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <td>
+                <div class="value-cell compact-value">
+                  <strong>
+                    {{ formatMoney(echeance.montantAFacturer) }}
+                    {{ getDeviseCode() }}
+                  </strong>
+
+                  <span *ngIf="!isProjectCurrencyTnd()">
+                    ≈ {{ formatMoney(echeance.montantAFacturerTnd) }} TND
+                  </span>
+                </div>
+              </td>
+
+              <td>
+                <div class="value-cell compact-value">
+                  <strong>
+                    {{ formatPercent(echeance.cumulFacturationPourcentage) }}%
+                  </strong>
+
+                  <span> Cumul facturation </span>
+                </div>
+              </td>
+
+              <td>
+                <div class="payment-cell compact-payment">
+                  <span
+                    class="status-pill"
+                    [ngClass]="getPaiementClass(echeance.statutPaiement)"
+                  >
+                    {{ getPaiementLabel(echeance.statutPaiement) }}
+                  </span>
+
+                  <strong>
+                    {{ formatMoney(echeance.montantPaye) }}
+                    {{ getDeviseCode() }}
+                  </strong>
+
+                  <span *ngIf="!isProjectCurrencyTnd()">
+                    ≈ {{ formatMoney(echeance.montantPayeTnd) }} TND
+                  </span>
+                </div>
+              </td>
+
+              <td>
+                <div class="date-cell compact-date">
+                  <span>
+                    Prévue :
+                    <strong>{{ echeance.datePrevisionnelle || "—" }}</strong>
+                  </span>
+
+                  <span>
+                    Réelle :
+                    <strong>{{ echeance.dateReelle || "—" }}</strong>
+                  </span>
+                </div>
+
+                <div class="status-row compact-status-row">
+                  <span
+                    class="mini-chip"
+                    [class.chip-success]="echeance.facture"
+                  >
+                    {{ getFactureLabel(echeance) }}
+                  </span>
+
+                  <span class="mini-chip" [class.chip-success]="echeance.regle">
+                    {{ getRegleLabel(echeance) }}
+                  </span>
+                </div>
+              </td>
+
+              <td class="actions-col">
+                <div class="actions-cell">
+                  <button
+                    mat-icon-button
+                    type="button"
+                    (click)="openDetailsDrawer(echeance)"
+                  >
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+
+                  <button
+                    mat-icon-button
+                    type="button"
+                    (click)="openEditDrawer(echeance)"
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    type="button"
+                    [disabled]="isDeletingEcheanceId === echeance.id"
+                    (click)="deleteEcheance(echeance)"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr class="total-row" *ngIf="hasEcheances">
+              <td>
+                <strong>TOTAL FACTURATION</strong>
+              </td>
+
+              <td>
+                <span>Total à facturer</span>
+                <strong>
+                  {{ formatMoney(facturation.baseFacturation) }}
+                  {{ getDeviseCode() }}
+                </strong>
+
+                <small *ngIf="!isProjectCurrencyTnd()">
+                  ≈ {{ formatMoney(facturation.baseFacturationTnd) }} TND
+                </small>
+              </td>
+
+              <td>
+                <span>Planifié</span>
+                <strong>
+                  {{ formatPercent(facturation.totalPourcentagePlanifie) }}%
+                </strong>
+              </td>
+
+              <td>
+                <span>Facturé</span>
+                <strong>
+                  {{ formatPercent(facturation.pourcentageFacture) }}%
+                </strong>
+              </td>
+
+              <td>
+                <span>Reste planifiable</span>
+                <strong>
+                  {{
+                    formatPercent(facturation.pourcentageRestantPlanifiable)
+                  }}%
+                </strong>
+              </td>
+
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+
+  <app-facturation-echeance-form-drawer
+    *ngIf="isFormDrawerOpen && facturation"
+    [projetId]="projetId"
+    [facturation]="facturation"
+    [echeanceToEdit]="selectedEcheance"
+    (closed)="closeFormDrawer()"
+    (saved)="onEcheanceSaved($event)"
+  ></app-facturation-echeance-form-drawer>
+
+  <app-facturation-echeance-details-drawer
+    *ngIf="isDetailsDrawerOpen && selectedEcheance && facturation"
+    [echeance]="selectedEcheance"
+    [deviseCode]="facturation.deviseCode || 'TND'"
+    (closed)="closeDetailsDrawer()"
+  ></app-facturation-echeance-details-drawer>
+</div>

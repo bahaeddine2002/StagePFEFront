@@ -10,6 +10,9 @@ import { ReferentielItem } from "../models/ReferentielItem";
 import { ProjetService } from "../services/projet.service";
 import { Router } from "@angular/router";
 import { ProjetCreateRequest } from "../models/Projets";
+import { OrganisationResponse } from "../../admin/models/organisation.model";
+import { OrganisationService } from "../../admin/services/organisation.service";
+import { forkJoin } from "rxjs";
 
 @Component({
   selector: "app-project-create",
@@ -25,6 +28,11 @@ export class ProjectCreateComponent implements OnInit {
   devises: ReferentielItem[] = [];
   chefsProjet: ChefProjetOption[] = [];
 
+  clients: OrganisationResponse[] = [];
+  partenaires: OrganisationResponse[] = [];
+  bailleursDeFonds: OrganisationResponse[] = [];
+  isLoadingOrganisations = false;
+
   isSubmitting = false;
 
   constructor(
@@ -33,12 +41,15 @@ export class ProjectCreateComponent implements OnInit {
     private usersService: UsersService,
     private projetService: ProjetService,
     private router: Router,
+    private readonly organisationService: OrganisationService,
   ) {}
 
   ngOnInit(): void {
+    this.loadOrganisations();
     this.initForm();
     this.loadReferentiels();
     this.setupFormListeners();
+    this.setupBusinessModelListener();
     this.updateCalculatedPreview();
     console.log("hello");
   }
@@ -49,9 +60,9 @@ export class ProjectCreateComponent implements OnInit {
       codeProjet: ["", Validators.required],
       contractId: [""],
       nomProjet: ["", Validators.required],
-      client: ["", Validators.required],
-      partenaire: [""],
-      bailleurDeFonds: [""],
+      clientId: [null, Validators.required],
+      partenaireId: [null],
+      bailleurDeFondsId: [null],
       chefProjetId: [null, Validators.required],
       descriptionProjet: [""],
 
@@ -78,6 +89,31 @@ export class ProjectCreateComponent implements OnInit {
       // Workload
       workloadInitialJh: [0, [Validators.min(0)]],
       workloadGarantieJh: [0, [Validators.min(0)]],
+    });
+  }
+
+  private loadOrganisations(): void {
+    this.isLoadingOrganisations = true;
+
+    forkJoin({
+      clients: this.organisationService.getActiveOrganisationsByType("CLIENT"),
+      partenaires:
+        this.organisationService.getActiveOrganisationsByType("PARTENAIRE"),
+      bailleurs:
+        this.organisationService.getActiveOrganisationsByType(
+          "BAILLEUR_DE_FONDS",
+        ),
+    }).subscribe({
+      next: ({ clients, partenaires, bailleurs }) => {
+        this.clients = clients ?? [];
+        this.partenaires = partenaires ?? [];
+        this.bailleursDeFonds = bailleurs ?? [];
+        this.isLoadingOrganisations = false;
+      },
+      error: (error) => {
+        console.error("Erreur chargement organisations", error);
+        this.isLoadingOrganisations = false;
+      },
     });
   }
 
@@ -213,32 +249,27 @@ export class ProjectCreateComponent implements OnInit {
 
     const raw = this.projectForm.getRawValue();
 
-    /**
-     * IMPORTANT:
-     * Do not send calculated frontend preview fields:
-     * - budgetSt2i
-     * - budgetTotal
-     * - dureeContratJours
-     * - workloadVenduAvenantsInclusJh
-     *
-     * Backend recalculates official values.
-     */
     const payload = {
       codeProjet: raw.codeProjet,
-      contractId: raw.contractId,
+      contractId: raw.contractId || null,
+
       nomProjet: raw.nomProjet,
-      client: raw.client,
-      partenaire: raw.partenaire,
-      bailleurDeFonds: raw.bailleurDeFonds,
+      descriptionProjet: raw.descriptionProjet || null,
+
+      clientId: raw.clientId,
+      partenaireId: this.isGroupementBusinessModel()
+        ? raw.partenaireId || null
+        : null,
+      bailleurDeFondsId: raw.bailleurDeFondsId || null,
+
       projectManagerId: raw.chefProjetId,
-      descriptionProjet: raw.descriptionProjet,
 
       businessModelId: raw.businessModelId,
       typeEngagementId: raw.typeEngagementId,
       statutProjetId: raw.statutProjetId,
 
       dateDemarrage: raw.dateDemarrage,
-      dateDemarrageEffective: raw.dateDemarrageEffective,
+      dateDemarrageEffective: raw.dateDemarrageEffective || null,
       dateFinInitialePrevue: raw.dateFinPrevue,
 
       deviseProjetId: raw.deviseProjetId,
@@ -252,6 +283,37 @@ export class ProjectCreateComponent implements OnInit {
     };
 
     this.createProjet(payload);
+  }
+
+  isGroupementBusinessModel(): boolean {
+    const selectedId = Number(this.projectForm.get("businessModelId")?.value);
+
+    if (!selectedId) {
+      return false;
+    }
+
+    const selectedBusinessModel = this.businessModels.find(
+      (item) => item.id === selectedId,
+    );
+
+    const label = selectedBusinessModel?.libelle?.toLowerCase().trim() || "";
+
+    return label.includes("groupement");
+  }
+
+  private setupBusinessModelListener(): void {
+    this.projectForm.get("businessModelId")?.valueChanges.subscribe(() => {
+      if (!this.isGroupementBusinessModel()) {
+        this.projectForm.patchValue(
+          {
+            partenaireId: null,
+          },
+          {
+            emitEvent: false,
+          },
+        );
+      }
+    });
   }
 
   private createProjet(payload: ProjetCreateRequest): void {

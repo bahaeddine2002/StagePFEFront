@@ -10,6 +10,12 @@ import { FicheIdentificationComponent } from "./fiche-identification/fiche-ident
 import { DevisInterneComponent } from "./devis-interne/devis-interne_list/devis-interne.component";
 import { ProjetEditComponent } from "./projet-edit/projet-edit.component";
 import { CoutPrevisionnelComponent } from "./cout-previsionnel/cout-previsionnel.component";
+import { CoutActualiseComponent } from "./cout-actualise/cout-actualise.component";
+import { LivrablesProjetComponent } from "./livrables-projet/livrables-projet.component";
+import { StatistiqueProjetComponent } from "./statistique-projet/statistique-projet.component";
+import { DashboardHomeComponent } from "./dashboard-home/dashboard-home.component";
+import { FacturationComponent } from "./facturation/facturation.component";
+
 const routes: Routes = [
   {
     path: "",
@@ -33,7 +39,7 @@ const routes: Routes = [
 
       {
         path: ":id/vue-ensemble",
-        component: ProjetPagePlaceholderComponent,
+        component: DashboardHomeComponent,
       },
       {
         path: ":id/fiche-identification",
@@ -41,11 +47,11 @@ const routes: Routes = [
       },
       {
         path: ":id/livrables",
-        component: ProjetPagePlaceholderComponent,
+        component: LivrablesProjetComponent,
       },
       {
         path: ":id/cout-actualise",
-        component: ProjetPagePlaceholderComponent,
+        component: CoutActualiseComponent,
       },
       {
         path: ":id/cout-previsionnel",
@@ -61,11 +67,11 @@ const routes: Routes = [
       },
       {
         path: ":id/facturation",
-        component: ProjetPagePlaceholderComponent,
+        component: FacturationComponent,
       },
       {
         path: ":id/statistique",
-        component: ProjetPagePlaceholderComponent,
+        component: StatistiqueProjetComponent,
       },
     ],
   },

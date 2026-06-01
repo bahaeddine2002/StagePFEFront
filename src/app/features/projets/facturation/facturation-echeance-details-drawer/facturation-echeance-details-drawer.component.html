@@ -1,0 +1,238 @@
+<div class="drawer-overlay" (click)="close()"></div>
+
+<aside class="di-drawer">
+  <header class="drawer-header">
+    <div>
+      <div class="drawer-title-row">
+        <h2>Détails de l’échéance</h2>
+
+        <span class="drawer-status" [class.negative]="!echeance.facture">
+          {{ getFactureLabel() }}
+        </span>
+      </div>
+
+      <p>
+        Échéance {{ echeance.ordre }} —
+        {{ echeance.description || "Sans description" }}
+      </p>
+    </div>
+
+    <button
+      mat-icon-button
+      class="drawer-close"
+      type="button"
+      (click)="close()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <div class="drawer-body">
+    <!-- 01 Identification -->
+    <article class="drawer-card">
+      <div class="drawer-card-title blue-title">
+        <span>01</span>
+        <h3>Identification</h3>
+      </div>
+
+      <div class="drawer-grid">
+        <div class="drawer-field">
+          <span>Ordre</span>
+          <strong>Échéance {{ echeance.ordre }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Description</span>
+          <strong>{{ echeance.description || "—" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Évènement</span>
+          <strong>{{ echeance.evenement || "—" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Pourcentage</span>
+          <strong>{{ formatPercent(echeance.pourcentage) }}%</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Référence facture</span>
+          <strong>{{ echeance.referenceFacture || "—" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Devise</span>
+          <strong>{{ deviseCode || "TND" }}</strong>
+        </div>
+      </div>
+    </article>
+
+    <!-- 02 Montants -->
+    <article class="drawer-card">
+      <div class="drawer-card-title blue-title">
+        <span>02</span>
+        <h3>Montants à facturer</h3>
+      </div>
+
+      <div class="drawer-grid">
+        <div class="drawer-field">
+          <span>Montant à facturer</span>
+          <strong>
+            {{ formatMoney(echeance.montantAFacturer) }} {{ deviseCode }}
+          </strong>
+        </div>
+
+        <div class="drawer-field" *ngIf="!isTndCurrency()">
+          <span>Montant à facturer TND</span>
+          <strong>{{ formatMoney(echeance.montantAFacturerTnd) }} TND</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Cumul facturation</span>
+          <strong>
+            {{ formatMoney(echeance.cumulFacturation) }} {{ deviseCode }}
+          </strong>
+        </div>
+
+        <div class="drawer-field" *ngIf="!isTndCurrency()">
+          <span>Cumul facturation TND</span>
+          <strong>{{ formatMoney(echeance.cumulFacturationTnd) }} TND</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Reste à facturer</span>
+          <strong>
+            {{ formatMoney(echeance.resteAFacturer) }} {{ deviseCode }}
+          </strong>
+        </div>
+
+        <div class="drawer-field" *ngIf="!isTndCurrency()">
+          <span>Reste à facturer TND</span>
+          <strong>{{ formatMoney(echeance.resteAFacturerTnd) }} TND</strong>
+        </div>
+      </div>
+
+      <div class="drawer-total-line">
+        <span>Cumul facturation</span>
+        <strong>
+          {{ formatPercent(echeance.cumulFacturationPourcentage) }}%
+        </strong>
+      </div>
+
+      <div class="drawer-total-line">
+        <span>Reste après cette échéance</span>
+        <strong>
+          {{ formatPercent(echeance.resteAFacturerPourcentage) }}%
+        </strong>
+      </div>
+    </article>
+
+    <!-- 03 Paiement -->
+    <article class="drawer-card">
+      <div
+        class="drawer-card-title"
+        [class.green-title]="echeance.statutPaiement === 'PAYE'"
+        [class.red-title]="echeance.statutPaiement === 'NON_PAYE'"
+        [class.slate-title]="echeance.statutPaiement === 'PARTIELLEMENT_PAYE'"
+      >
+        <span>03</span>
+        <h3>Paiement</h3>
+      </div>
+
+      <div class="drawer-grid">
+        <div class="drawer-field">
+          <span>Statut paiement</span>
+          <strong>
+            <span class="status-pill" [ngClass]="getPaiementStatusClass()">
+              {{ getPaiementLabel(echeance.statutPaiement) }}
+            </span>
+          </strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Réglé</span>
+          <strong>{{ getRegleLabel() }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Montant payé</span>
+          <strong>
+            {{ formatMoney(echeance.montantPaye) }} {{ deviseCode }}
+          </strong>
+        </div>
+
+        <div class="drawer-field" *ngIf="!isTndCurrency()">
+          <span>Montant payé TND</span>
+          <strong>{{ formatMoney(echeance.montantPayeTnd) }} TND</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Cumul payé</span>
+          <strong>
+            {{ formatMoney(echeance.cumulPaye) }} {{ deviseCode }}
+          </strong>
+        </div>
+
+        <div class="drawer-field" *ngIf="!isTndCurrency()">
+          <span>Cumul payé TND</span>
+          <strong>{{ formatMoney(echeance.cumulPayeTnd) }} TND</strong>
+        </div>
+      </div>
+    </article>
+
+    <!-- 04 Dates -->
+    <article class="drawer-card">
+      <div class="drawer-card-title slate-title">
+        <span>04</span>
+        <h3>Dates</h3>
+      </div>
+
+      <div class="drawer-grid">
+        <div class="drawer-field">
+          <span>Date initiale</span>
+          <strong>{{ echeance.dateInitiale || "—" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Date prévisionnelle</span>
+          <strong>{{ echeance.datePrevisionnelle || "—" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Date réelle</span>
+          <strong>{{ echeance.dateReelle || "—" }}</strong>
+        </div>
+
+        <div class="drawer-field">
+          <span>Statut facturation</span>
+          <strong>{{ getFactureLabel() }}</strong>
+        </div>
+      </div>
+    </article>
+
+    <!-- 05 Commentaires -->
+    <article class="drawer-card">
+      <div class="drawer-card-title slate-title">
+        <span>05</span>
+        <h3>Commentaires</h3>
+      </div>
+
+      <div class="drawer-comment">
+        <span>Remarque</span>
+        <p>{{ echeance.commentaires || "Aucun commentaire renseigné." }}</p>
+      </div>
+    </article>
+  </div>
+
+  <footer class="drawer-footer">
+    <button
+      mat-stroked-button
+      class="btn-secondary"
+      type="button"
+      (click)="close()"
+    >
+      Fermer
+    </button>
+  </footer>
+</aside>
